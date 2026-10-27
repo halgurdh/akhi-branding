@@ -30,3 +30,48 @@ pref("app.update.badgeWaitTime", 0);
 // Number of usages of the web console.
 // If this is less than 5, then pasting code into the web console is disabled
 pref("devtools.selfxss.count", 5);
+
+// AkhiBrowser: no Mozilla privacy notice, terms of use notice or data collection
+pref("datareporting.policy.dataSubmissionEnabled", false);
+pref("datareporting.policy.firstRunURL", "");
+pref("datareporting.healthreport.uploadEnabled", false);
+pref("datareporting.usage.uploadEnabled", false);
+pref("toolkit.telemetry.unified", false);
+pref("termsofuse.bypassNotification", true);
+pref("app.shield.optoutstudies.enabled", false);
+pref("app.normandy.enabled", false);
+pref("nimbus.rollouts.enabled", false);
+pref("browser.discovery.enabled", false);
+pref("browser.newtabpage.activity-stream.feeds.telemetry", false);
+pref("browser.newtabpage.activity-stream.telemetry", false);
+
+// AkhiBrowser: the new tab has the search box and the user's shortcuts, without stories, widgets, weather or
+// sponsored shortcuts. The default shortcuts are Islamic sites.
+pref("browser.newtabpage.activity-stream.feeds.section.topstories", false);
+pref("browser.newtabpage.activity-stream.showSponsored", false);
+pref("browser.newtabpage.activity-stream.system.showSponsored", false);
+pref("browser.newtabpage.activity-stream.showSponsoredTopSites", false);
+pref("browser.newtabpage.activity-stream.showWeather", false);
+pref("browser.newtabpage.activity-stream.system.showWeather", false);
+pref("browser.newtabpage.activity-stream.widgets.enabled", false);
+pref("browser.newtabpage.activity-stream.widgets.system.enabled", false);
+pref("browser.newtabpage.activity-stream.unifiedAds.tiles.enabled", false);
+pref("browser.newtabpage.activity-stream.unifiedAds.spocs.enabled", false);
+pref("browser.newtabpage.activity-stream.asrouter.userprefs.cfr.addons", false);
+pref("browser.newtabpage.activity-stream.asrouter.userprefs.cfr.features", false);
+pref("browser.topsites.contile.enabled", false);
+pref("browser.topsites.useRemoteSetting", false);
+pref("browser.newtabpage.activity-stream.default.sites", "https://quran.com/,https://sunnah.com/,https://www.islamicfinder.org/");
+
+// AkhiBrowser: no sponsored or trending suggestions in the address bar
+pref("browser.urlbar.quicksuggest.enabled", false);
+pref("browser.urlbar.suggest.quicksuggest.sponsored", false);
+pref("browser.urlbar.suggest.quicksuggest.nonsponsored", false);
+pref("browser.urlbar.sponsoredTopSites", false);
+pref("browser.urlbar.suggest.trending", false);
+pref("browser.urlbar.trending.featureGate", false);
+pref("browser.urlbar.suggest.yelp", false);
+pref("browser.urlbar.suggest.weather", false);
+pref("browser.preferences.moreFromMozilla", false);
+pref("browser.vpn_promo.enabled", false);
+pref("extensions.htmlaboutaddons.recommendations.enabled", false);
