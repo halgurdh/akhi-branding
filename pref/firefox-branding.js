@@ -75,3 +75,22 @@ pref("browser.urlbar.suggest.weather", false);
 pref("browser.preferences.moreFromMozilla", false);
 pref("browser.vpn_promo.enabled", false);
 pref("extensions.htmlaboutaddons.recommendations.enabled", false);
+
+// AkhiBrowser: secure and private by default. Strict tracking protection is set by the built-in extension on the
+// first run (browser/extensions/akhi/background.js).
+pref("dom.security.https_only_mode", true);
+pref("privacy.globalprivacycontrol.enabled", true);
+// DNS over HTTPS, with Cloudflare's family DNS, which also blocks adult and malware sites
+pref("network.trr.mode", 2);
+pref("network.trr.uri", "https://family.cloudflare-dns.com/dns-query");
+pref("network.trr.custom_uri", "https://family.cloudflare-dns.com/dns-query");
+// WebRTC doesn't reveal the local IP addresses
+pref("media.peerconnection.ice.default_address_only", true);
+// no connections to sites before they are opened
+pref("network.prefetch-next", false);
+pref("network.dns.disablePrefetch", true);
+pref("network.http.speculative-parallel-limit", 0);
+pref("browser.urlbar.speculativeConnect.enabled", false);
+pref("browser.places.speculativeConnect.enabled", false);
+// Mozilla Monitor
+pref("signon.management.page.breach-alerts.enabled", false);
