@@ -1,0 +1,11 @@
+# AkhiBrowser desktop (Windows, macOS, Linux).
+# Use with: MOZCONFIG=mozconfigs/akhi-desktop ./mach build
+
+ac_add_options --enable-project=browser
+ac_add_options --with-branding=browser/branding/akhi
+ac_add_options --with-app-basename=AkhiBrowser
+
+# Front-end only work: uncomment to download prebuilt binaries instead of compiling C++/Rust.
+# ac_add_options --enable-artifact-builds
+
+mk_add_options MOZ_OBJDIR=@TOPSRCDIR@/obj-akhi-desktop

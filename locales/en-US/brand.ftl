@@ -24,4 +24,4 @@
 # remain unchanged across different versions (Nightly, Beta, etc.).
 -brand-product-name = AkhiBrowser
 -vendor-short-name = Mozilla
-trademarkInfo = { " " }
+trademarkInfo = AkhiBrowser by Halgurd Hussein (AI assisted). NoMusic background music removal by Mohamed Sadiq. Built on Firefox by Mozilla.
