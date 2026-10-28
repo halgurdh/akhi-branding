@@ -1,0 +1,12 @@
+# AkhiBrowser for Windows on ARM (Snapdragon laptops), release build, made on an x64 Windows PC.
+# Use with: MOZCONFIG=mozconfigs/akhi-windows-arm64 ./mach build && ./mach package
+
+ac_add_options --enable-project=browser
+ac_add_options --target=aarch64-pc-windows-msvc
+ac_add_options --with-branding=browser/branding/akhi
+ac_add_options --with-app-basename=AkhiBrowser
+# No Mozilla update server or crash report server: AkhiBrowser isn't a Mozilla product
+ac_add_options --disable-updater
+ac_add_options --disable-crashreporter
+
+mk_add_options MOZ_OBJDIR=@TOPSRCDIR@/obj-akhi-windows-arm64
