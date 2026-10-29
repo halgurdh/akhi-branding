@@ -1,5 +1,5 @@
 # AkhiBrowser for Android, 64-bit ARM phones (most phones since about 2017), release build.
-# Use with: MOZCONFIG=mozconfigs/akhi-android-arm64 ./mach build && ./mach gradle :fenix:assembleRelease
+# Use with: MOZCONFIG=browser/branding/akhi/mozconfigs/akhi-android-arm64 ./mach build && ./mach gradle :fenix:assembleRelease
 
 ac_add_options --enable-project=mobile/android
 ac_add_options --target=aarch64-linux-android

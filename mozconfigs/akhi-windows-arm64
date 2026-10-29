@@ -1,5 +1,5 @@
 # AkhiBrowser for Windows on ARM (Snapdragon laptops), release build, made on an x64 Windows PC.
-# Use with: MOZCONFIG=mozconfigs/akhi-windows-arm64 ./mach build && ./mach package
+# Use with: MOZCONFIG=browser/branding/akhi/mozconfigs/akhi-windows-arm64 ./mach build && ./mach package
 
 ac_add_options --enable-project=browser
 ac_add_options --target=aarch64-pc-windows-msvc

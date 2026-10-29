@@ -1,5 +1,5 @@
 # AkhiBrowser desktop (Windows, macOS, Linux).
-# Use with: MOZCONFIG=mozconfigs/akhi-desktop ./mach build
+# Use with: MOZCONFIG=browser/branding/akhi/mozconfigs/akhi-desktop ./mach build
 
 ac_add_options --enable-project=browser
 ac_add_options --with-branding=browser/branding/akhi

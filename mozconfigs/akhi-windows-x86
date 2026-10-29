@@ -1,5 +1,5 @@
 # AkhiBrowser for 32-bit Windows (older PCs), release build, made on an x64 Windows PC.
-# Use with: MOZCONFIG=mozconfigs/akhi-windows-x86 ./mach build && ./mach package
+# Use with: MOZCONFIG=browser/branding/akhi/mozconfigs/akhi-windows-x86 ./mach build && ./mach package
 
 ac_add_options --enable-project=browser
 ac_add_options --target=i686-pc-windows-msvc
