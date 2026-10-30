@@ -94,3 +94,35 @@ pref("browser.urlbar.speculativeConnect.enabled", false);
 pref("browser.places.speculativeConnect.enabled", false);
 // Mozilla Monitor
 pref("signon.management.page.breach-alerts.enabled", false);
+
+// AkhiBrowser: no Mozilla account or Sync (no sign-in, no device pairing, no send-tab)
+pref("identity.fxaccounts.enabled", false);
+pref("identity.fxaccounts.pairing.enabled", false);
+pref("identity.fxaccounts.toolbar.enabled", false);
+pref("identity.fxaccounts.telemetry.clientAssociationPing.enabled", false);
+pref("identity.fxaccounts.telemetry.clientInfoPing.enabled", false);
+
+// AkhiBrowser: all telemetry off, nothing sent to Mozilla (the master switches are above)
+pref("toolkit.telemetry.enabled", false);
+pref("toolkit.telemetry.server", "data:,");
+pref("toolkit.telemetry.archive.enabled", false);
+pref("toolkit.telemetry.newProfilePing.enabled", false);
+pref("toolkit.telemetry.shutdownPingSender.enabled", false);
+pref("toolkit.telemetry.updatePing.enabled", false);
+pref("toolkit.telemetry.bhrPing.enabled", false);
+pref("toolkit.telemetry.firstShutdownPing.enabled", false);
+pref("toolkit.telemetry.coverage.opt-out", true);
+pref("toolkit.coverage.opt-out", true);
+pref("toolkit.coverage.endpoint.base", "");
+pref("browser.ping-centre.telemetry", false);
+
+// AkhiBrowser: no experiments or remote experiment configuration (Normandy and Nimbus)
+pref("app.normandy.api_url", "");
+pref("messaging-system.rsexperimentloader.enabled", false);
+
+// AkhiBrowser: no web push notifications, and no Monitor/VPN promos in the protections dashboard
+pref("dom.push.enabled", false);
+pref("dom.push.connection.enabled", false);
+pref("browser.contentblocking.report.monitor.enabled", false);
+pref("browser.contentblocking.report.lockwise.enabled", false);
+pref("browser.contentblocking.report.hide_vpn_banner", true);
