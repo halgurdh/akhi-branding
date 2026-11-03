@@ -175,6 +175,12 @@ def desktop():
     save(render(256, True), f"{b}/pbmode.ico", sizes=[(16, 16), (32, 32), (48, 48), (256, 256)])
     save(render(1024), f"{b}/firefox.icns")
     save(render(1024), f"{b}/disk.icns")
+    save(render(1024), f"{b}/document.icns")
+
+    # the App Store icon of a future iOS app: square, without transparency
+    ios = gradient((1024, 1024), TEAL_TOP, TEAL_BOTTOM)
+    ios.alpha_composite(render(1024))
+    save(ios.convert("RGB"), f"{b}/ios/AppIcon-1024.png")
 
     save(tile(300), f"{b}/VisualElements_150.png")
     save(tile(142), f"{b}/VisualElements_70.png")
