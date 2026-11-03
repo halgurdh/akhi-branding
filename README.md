@@ -66,3 +66,25 @@ What has to change from this extension, either way:
 `ios/AppIcon-1024.png` is the App Store icon (square, no transparency, also from `tools/make_icons.py`). Reusable as
 they are: `lib/search_filter.js`, `lib/content_filter.js` (without the lists), `content/image_scan.*`,
 `lib/image_classifier.js` and the models, if WebAssembly runs well enough.
+
+### ARM devices
+
+AkhiBrowser is 64-bit only: 64-bit ARM is supported where a config exists, 32-bit ARM (`armeabi-v7a`) is dropped.
+
+| Device | Config | State |
+| --- | --- | --- |
+| Android phones and tablets (`arm64-v8a`) | `mozconfigs/akhi-android-arm64` | Released; the APK was installed and run on a Galaxy A54 |
+| Windows on ARM (Snapdragon laptops) | `mozconfigs/akhi-windows-arm64` | Config only, made on an x64 Windows PC, never released or tested. Until then these laptops can run the x64 build through Windows' emulation, slower |
+| Macs with Apple silicon | `mozconfigs/akhi-macos-arm64` | Config only, needs a Mac, see above |
+| Linux on ARM | None yet: `mozconfigs/akhi-desktop` on an ARM machine should build natively | Not tried |
+| iPhone and iPad | None: see iOS above | Not possible with this engine for now |
+| Old 32-bit ARM phones | Removed | Can stay on 0.2.1, which still has the APK, without updates |
+
+The image check needs no change per processor: it runs on WebAssembly or WebGL, and the models and `filters/*.bin` are
+the same files everywhere. The lists are read as little-endian, which all of these are.
+
+TV Akhi is separate: it still ships `armeabi-v7a` as well as `arm64-v8a`. Keep both unless that changes on purpose, as
+many Android TVs may run a 32-bit system.
+
+To add a Windows ARM download: build and package with its config, test it on a real device (the blur and no music at
+least), then add the installer to the release next to the x64 one.
