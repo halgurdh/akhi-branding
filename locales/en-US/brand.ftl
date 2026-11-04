@@ -23,5 +23,5 @@
 # This brand name can be used in messages where the product name needs to
 # remain unchanged across different versions (Nightly, Beta, etc.).
 -brand-product-name = AkhiBrowser
--vendor-short-name = Mozilla
-trademarkInfo = AkhiBrowser by Halgurd Hussein (AI assisted). NoMusic background music removal by Mohamed Sadiq. Built on Firefox by Mozilla.
+-vendor-short-name = AkhiBrowser
+trademarkInfo = AkhiBrowser. AI assisted. NoMusic background music removal by Mohamed Sadiq. Built on Firefox by Mozilla.
