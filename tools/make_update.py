@@ -48,7 +48,9 @@ def build_target(dist):
     substs = (dist.parent / "config/autoconf.mk").read_text(encoding="utf-8", errors="replace")
     os_target = re.search(r"^OS_TARGET\s*=\s*(\S+)", substs, re.M).group(1)
     abi = re.search(r"^TARGET_XPCOM_ABI\s*=\s*(\S+)", substs, re.M).group(1)
-    return f"{os_target}_{abi}"
+    # Windows adds the architecture it runs on to %BUILD_TARGET%: see the ABI getter of UpdateUtils.sys.mjs
+    architecture = "aarch64" if abi.startswith("aarch64") else "x64"
+    return f"{os_target}_{abi}-{architecture}"
 
 
 def main():
@@ -83,7 +85,7 @@ def main():
     (package / "precomplete").touch()
     environment = dict(
         os.environ,
-        MAR=str(dist / "host/bin/mar.exe"),
+        MAR=(dist / "host/bin/mar.exe").as_posix(),
         MOZ_PRODUCT_VERSION=app_version,
         MAR_CHANNEL_ID=MAR_CHANNEL_ID,
         MOZ_FULL_PRODUCT_VERSION=app_version,
@@ -95,6 +97,7 @@ def main():
             "tools/update-packaging/make_full_update.sh",
             unsigned.as_posix(),
             package.as_posix(),
+            "akhibrowser",
         ],
         cwd=ROOT,
         env=environment,
@@ -109,7 +112,7 @@ def main():
         check=True,
     )
     subprocess.run(
-        [signmar, "-d", str(args.keys), "-n", KEY_NICKNAME, "-v", str(signed)],
+        [signmar, "-D", str(ROOT / "browser/branding/akhi/update/primary.der"), "-v", str(signed)],
         env=environment,
         check=True,
     )
