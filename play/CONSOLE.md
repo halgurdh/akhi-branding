@@ -76,6 +76,9 @@ Google asks for a short video of each: record the download, the media notificati
 
 Name (30 max): `AkhiBrowser: Halal Web Browser`
 
+Contact details: email `support@akhibrowser.com`, website `https://akhibrowser.com`. Category: Communication (where
+Play lists browsers).
+
 Short description (80 max):
 
 > A private browser for Muslims: blocks adult sites, blurs images, removes music.
@@ -94,9 +97,18 @@ Full description:
 >
 > Each protection can be turned off in the menu, under Extensions, AkhiBrowser.
 >
-> Premium (optional, paid through Google Play, monthly, yearly or lifetime): recognize hijab, set a parental PIN, block
-> chosen sites, allow only approved sites, set time limits, and see a summary of blocked pages. Parent controls stay on
-> the device.
+> Premium (optional, paid through Google Play, monthly, yearly or lifetime; each feature off until you turn it on):
+>
+> - Recognize hijab: a woman who is covered is shown instead of blurred
+> - Parental PIN: locks the protections so they can't be turned off
+> - Block chosen sites
+> - Allow only approved sites
+> - Time limits, with bedtime and school hours
+> - Activity summary of blocked pages, without their addresses
+> - Feed limit: hides short video feeds and stops social media websites in AkhiBrowser after a daily time
+>
+> Parent controls and the feed limit stay on the device. The feed limit works on websites in AkhiBrowser, not in other
+> apps.
 >
 > Filters can miss things, and can't replace a parent's care.
 >
@@ -108,6 +120,8 @@ Rules for this text and the graphics:
 - Don't use "Firefox" or Mozilla's logos in the name, the icon or the screenshots, and keep the sentence above saying it
   isn't made by Mozilla.
 - Don't name YouTube or other services as sites where ads are blocked, or show their logos.
+- The feed limit: say it works on websites in AkhiBrowser, never that it blocks the YouTube, Instagram or TikTok apps.
+  It uses no Accessibility service and no usage access, so there is no form for them; keep it that way.
 - Don't use words like "best" or "#1", or promise that nothing gets through.
 - Screenshots: use plain pages and never show an unblurred image of the kind being filtered. Needed: icon 512x512, feature
   graphic 1024x500, at least 2 phone screenshots.
