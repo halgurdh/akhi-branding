@@ -11,8 +11,8 @@ For the build made by `tools/build_play.py`. Upload the `.aab`, never the APK: P
      build and the GitHub APK as different signers: moving between them means uninstalling, which loses the user's data.
    - Or give Google your own `akhibrowser-release.jks` (the Console's "Export and upload a key from Java keystore"). Both
      builds then share a signer, but Google holds a copy of that key.
-3. **Privacy policy.** Commit and push `PRIVACY-ANDROID.md`. Its URL is
-   `https://github.com/halgurdh/akhiBrowser/blob/main/PRIVACY-ANDROID.md`.
+3. **Privacy policy.** Commit and push `PRIVACY.md`. Its URL is
+   `https://github.com/halgurdh/akhiBrowser/blob/main/PRIVACY.md`.
 4. **In-app products**, with exactly these ids, or buying fails (see `AkhiStore.kt`):
    - Subscription `akhi_premium` with base plans `monthly` and `yearly`
    - One-time product `akhi_premium_lifetime`
