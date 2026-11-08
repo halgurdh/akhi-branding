@@ -115,7 +115,10 @@ def output(command):
 
 def build(signing_path, work):
     minified = work / "extension"
-    run(["node", str(EXTENSION / "webext/minify.mjs"), str(minified)], shell=sys.platform == "win32")
+    run(
+        ["node", str(ROOT / "browser/branding/akhi/tools/merge_akhi_extension.mjs"), str(minified)],
+        shell=sys.platform == "win32",
+    )
     env = {
         **os.environ,
         "MOZCONFIG": MOZCONFIG,

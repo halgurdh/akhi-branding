@@ -51,7 +51,10 @@ def build(env):
     run([sys.executable, "mach", "build", "faster"], env=env)
     with tempfile.TemporaryDirectory() as temp:
         minified = Path(temp) / "extension"
-        run(["node", str(EXTENSION / "webext/minify.mjs"), str(minified)], shell=sys.platform == "win32")
+        run(
+            ["node", str(ROOT / "browser/branding/akhi/tools/merge_akhi_extension.mjs"), str(minified)],
+            shell=sys.platform == "win32",
+        )
         for source in minified.rglob("*"):
             if source.is_file():
                 target = BUILT_EXTENSION / source.relative_to(minified)

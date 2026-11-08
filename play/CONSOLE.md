@@ -14,8 +14,9 @@ For the build made by `tools/build_play.py`. Upload the `.aab`, never the APK: P
 3. **Privacy policy.** Commit and push `PRIVACY.md`. Its URL is
    `https://github.com/halgurdh/akhiBrowser/blob/main/PRIVACY.md`.
 4. **In-app products**, with exactly these ids, or buying fails (see `AkhiStore.kt`):
-   - Subscription `akhi_premium` with base plans `monthly` and `yearly`
-   - One-time product `akhi_premium_lifetime`
+   - Subscription `akhi_premium` with base plans `monthly` (€3.33) and `yearly` (€35.00)
+   - Subscription `akhi_family` with base plan `family` (€49.99, renews every year)
+   - One-time product `akhi_premium_lifetime` (€99.99)
 
 ## App access
 
