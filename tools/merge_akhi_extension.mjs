@@ -25,8 +25,21 @@ execFileSync(process.execPath, [join(extension, "webext", "minify.mjs"), target]
 
 for (const path of [
   "content/feeds.js",
+  "content/yt_clean.js",
+  "content/yt_clean.css",
+  "content/hide_comments.js",
+  "content/hide_comments.css",
+  "content/profanity_mask.js",
+  "content/strict_mode.js",
+  "lib/family_controls.js",
   "lib/family.js",
   "lib/premium.js",
+  "lib/prayer_pause.js",
+  "pages/family_backup.js",
+  "pages/family_pause.css",
+  "pages/family_pause.html",
+  "pages/family_pause.js",
+  "pages/family_tools.js",
   "pages/settings_premium.js",
   "faces",
   "gender",
@@ -47,9 +60,18 @@ cpSync(premiumClassifier, join(target, "lib", "image_classifier.js"));
 
 for (const path of [
   "content/feeds.js",
+  "content/yt_clean.js",
+  "content/hide_comments.js",
+  "content/profanity_mask.js",
+  "content/strict_mode.js",
+  "lib/family_controls.js",
   "lib/family.js",
   "lib/premium.js",
+  "lib/prayer_pause.js",
   "lib/image_classifier.js",
+  "pages/family_backup.js",
+  "pages/family_pause.js",
+  "pages/family_tools.js",
   "pages/settings_premium.js",
 ]) {
   const destination = join(target, path);
