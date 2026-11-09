@@ -68,6 +68,7 @@ for (const path of [
   "lib/family.js",
   "lib/premium.js",
   "lib/prayer_pause.js",
+  "lib/home_card.js",
   "lib/image_classifier.js",
   "pages/family_backup.js",
   "pages/family_pause.js",
