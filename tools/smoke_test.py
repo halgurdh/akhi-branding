@@ -49,7 +49,8 @@ def main():
         sys.exit("The browser doesn't start")
 
     pages = {f"page-{i}": url for i, url in enumerate(args.url, 1)} if args.url else PAGES
-    failed = [name for name, url in pages.items() if not screenshot(args.binary, url, args.out / f"{name}.png")]
+    out = args.out.resolve()
+    failed = [name for name, url in pages.items() if not screenshot(args.binary, url, out / f"{name}.png")]
     for name in pages:
         print(f"{name}: {'missing' if name in failed else 'ok'}")
     if failed:
