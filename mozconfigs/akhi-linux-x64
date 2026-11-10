@@ -1,0 +1,15 @@
+# AkhiBrowser for Linux, 64-bit Intel and AMD, release build, made on a Linux PC with that processor (or WSL2).
+# Use with: python browser/branding/akhi/tools/build_linux.py
+
+ac_add_options --enable-project=browser
+ac_add_options --target=x86_64-pc-linux-gnu
+ac_add_options --with-branding=browser/branding/akhi
+ac_add_options --with-app-basename=AkhiBrowser
+# No crash report server: AkhiBrowser isn't a Mozilla product
+# Updates come from the GitHub releases, signed with AkhiBrowser's key: see tools/make_update.py
+ac_add_options --enable-updater
+export MAR_CHANNEL_ID=akhibrowser-release
+export ACCEPTED_MAR_CHANNEL_IDS=akhibrowser-release
+ac_add_options --disable-crashreporter
+
+mk_add_options MOZ_OBJDIR=@TOPSRCDIR@/obj-akhi-linux-x64

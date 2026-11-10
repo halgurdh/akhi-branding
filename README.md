@@ -4,27 +4,57 @@ Private. Mounted in [akhiBrowser](https://github.com/halgurdh/akhiBrowser) at `b
 
 - The desktop branding: names (`locales/`), installer, icons and about dialog, in TV Akhi's colors.
   `tools/make_icons.py` makes all the icons again from the logo, desktop and Android (needs Pillow).
-- `mozconfigs/`: the build configurations, used from the top of akhiBrowser:
+- `mozconfigs/`: the build configurations, used from the top of akhiBrowser (or through the build scripts below):
 
 ```sh
 MOZCONFIG=browser/branding/akhi/mozconfigs/akhi-desktop ./mach build
 ```
 
-## Owner notes: macOS and iOS
+## Owner notes: macOS, Linux and iOS
 
 Owner only. This file is in the private `akhi-branding` repository; the README of `akhiBrowser` is public, so these
-notes don't belong there. Neither platform has been built or tested yet: both need a Mac.
+notes don't belong there. None of the three has been built or tested yet: macOS and iOS need a Mac.
+
+Every desktop build script does the same as `tools/build_windows.py`: build, merge and minify the extension and
+Premium (`npm install` in `browser/extensions/akhi/webext` once), package, and with `--keys` the signed update. Run
+`./mach bootstrap` once first. The release files go to `<objdir>/dist/release/`, named like the Windows installer.
+
+| Platform | Command | Release file |
+| --- | --- | --- |
+| Windows x64 | `python browser/branding/akhi/tools/build_windows.py` | `AkhiBrowser-windows-x64-setup.exe` |
+| Linux x64 | `python browser/branding/akhi/tools/build_linux.py` | `AkhiBrowser-linux-x64.tar.xz` |
+| Linux ARM | `python browser/branding/akhi/tools/build_linux.py --arch arm64` | `AkhiBrowser-linux-arm64.tar.xz` |
+| Mac, Apple silicon | `python browser/branding/akhi/tools/build_macos.py` | `AkhiBrowser-macos-arm64.dmg` |
+| Mac, Intel | `python browser/branding/akhi/tools/build_macos.py --arch x64` | `AkhiBrowser-macos-x64.dmg` |
+
+Updates: Linux and macOS have the updater on, like Windows, with the same channel and key. Upload the `.mar` and
+`update-<target>.xml` from `<objdir>/dist/update/` to the release next to the download; the browser asks for
+`update-Linux_x86_64-gcc3.xml`, `update-Linux_aarch64-gcc3.xml`, `update-Darwin_aarch64-gcc3.xml` or
+`update-Darwin_x86_64-gcc3.xml`.
+
+### Linux
+
+Builds on any 64-bit Linux, or WSL2 (Ubuntu) on the Windows PC: 16 GB of memory and 60 GB of free space at least.
+`build_linux.py` must run on the processor it builds for. The `.tar.xz` unpacks to `akhibrowser/`; start
+`akhibrowser/akhibrowser`. Updates only work where the user can write to that folder. Not done yet: a `.deb`, Flatpak
+or Snap, and a `.desktop` file for the menu (the icons `default16.png` to `default256.png` are ready for it).
 
 ### macOS: possible, needs a Mac and an Apple Developer account
 
 Ready: 64-bit build configs (`mozconfigs/akhi-macos-arm64`, `mozconfigs/akhi-macos-x64`), `firefox.icns`, `disk.icns`,
 `document.icns` and `background.png` (all from `tools/make_icons.py`). The extension needs no change: it runs as on
-Windows.
+Windows. The bundle id is `org.akhibrowser.desktop` (`--with-distribution-id=org.akhibrowser` in the configs and
+`MOZ_MACBUNDLE_ID` in `configure.sh`), and the configs make a `.dmg` (`MOZ_PKG_FORMAT=DMG`; without it a build that
+isn't `--enable-release` packages a `.tar`).
 
 ```sh
-MOZCONFIG=browser/branding/akhi/mozconfigs/akhi-macos-arm64 ./mach build
-MOZCONFIG=browser/branding/akhi/mozconfigs/akhi-macos-arm64 ./mach package
+python browser/branding/akhi/tools/build_macos.py
+python browser/branding/akhi/tools/build_macos.py --sign-identity "Developer ID Application: <name> (<Team ID>)" \
+    --notary-profile akhi --keys <folder>
 ```
+
+The second signs with `./mach macos-sign`, notarizes and staples the `.dmg`, and makes the update from the signed app.
+Save the notary profile once with `xcrun notarytool store-credentials akhi`.
 
 To do, on a Mac:
 
@@ -32,13 +62,19 @@ To do, on a Mac:
    Make it again from the logo with Xcode's Icon Composer and `actool`.
 2. `dsstore` is also unofficial's and mentions "Nightly". Lay out a mounted disk image in Finder and copy its
    `.DS_Store` here, or the disk image window can look wrong.
-3. Check the bundle id of the built app (`MOZ_MACBUNDLE_ID` in `configure.sh`). Decide it before the first release:
-   changing it later makes macOS treat the app as a new one.
-4. Sign and notarize. Without it Gatekeeper blocks the app on other Macs. It needs a paid Apple Developer account;
-   `./mach macos-sign` signs, then `xcrun notarytool` and `xcrun stapler`.
+3. Check that the built app says `org.akhibrowser.desktop`
+   (`defaults read AkhiBrowser.app/Contents/Info CFBundleIdentifier`). Changing it after the first release makes macOS
+   treat the app as a new one.
+4. Sign and notarize. Without it Gatekeeper blocks the app on other Macs. It needs a paid Apple Developer account and
+   a Developer ID Application certificate: `build_macos.py --sign-identity ... --notary-profile ...`. Signed apps are
+   changed by each update, so check that an update from the previous signed release still opens.
 5. Keep a separate download for each processor, or make a universal app, and check the blur on a real Mac.
 
 ### iOS: not with this engine for now
+
+The iOS app is now its own WebKit fork of firefox-ios, in the private
+[akhibrowser-ios](https://github.com/halgurdh/akhibrowser-ios): see its `docs/akhibrowser-ios-macos-release.md` for
+signing, `scripts/akhi-ios-build.sh` and Xcode Cloud. The notes below were written before it.
 
 Gecko isn't a real option. `mobile/ios` is Mozilla's prototype, and engines other than WebKit are only allowed in some
 regions (the EU, and Japan's rules since late 2025), with entitlements from Apple and extra security requirements. Check
@@ -76,8 +112,8 @@ AkhiBrowser is 64-bit only: 64-bit ARM is supported where a config exists, 32-bi
 | Android phones and tablets (`arm64-v8a`) | `mozconfigs/akhi-android-arm64` | Released; the APK was installed and run on a Galaxy A54 |
 | Windows on ARM (Snapdragon laptops) | `mozconfigs/akhi-windows-arm64` | Config only, made on an x64 Windows PC, never released or tested. Until then these laptops can run the x64 build through Windows' emulation, slower |
 | Macs with Apple silicon | `mozconfigs/akhi-macos-arm64` | Config only, needs a Mac, see above |
-| Linux on ARM | None yet: `mozconfigs/akhi-desktop` on an ARM machine should build natively | Not tried |
-| iPhone and iPad | None: see iOS above | Not possible with this engine for now |
+| Linux on ARM | `mozconfigs/akhi-linux-arm64`, built on an ARM Linux machine | Config only, not tried |
+| iPhone and iPad | None here: the WebKit app in akhibrowser-ios | Development build, see above |
 | Old 32-bit ARM phones | Removed | Can stay on 0.2.1, which still has the APK, without updates |
 
 The image check needs no change per processor: it runs on WebAssembly or WebGL, and the models and `filters/*.bin` are

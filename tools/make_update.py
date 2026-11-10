@@ -29,6 +29,10 @@ KEY_NICKNAME = "akhi-update-primary"
 PLATFORMS = {
     "WINNT_x86_64-msvc-x64": "windows-x64",
     "WINNT_aarch64-msvc-aarch64": "windows-arm64",
+    "Darwin_aarch64-gcc3": "macos-arm64",
+    "Darwin_x86_64-gcc3": "macos-x64",
+    "Linux_x86_64-gcc3": "linux-x64",
+    "Linux_aarch64-gcc3": "linux-arm64",
 }
 
 
@@ -48,9 +52,18 @@ def build_target(dist):
     substs = (dist.parent / "config/autoconf.mk").read_text(encoding="utf-8", errors="replace")
     os_target = re.search(r"^OS_TARGET\s*=\s*(\S+)", substs, re.M).group(1)
     abi = re.search(r"^TARGET_XPCOM_ABI\s*=\s*(\S+)", substs, re.M).group(1)
+    if os_target != "WINNT":
+        return f"{os_target}_{abi}"
     # Windows adds the architecture it runs on to %BUILD_TARGET%: see the ABI getter of UpdateUtils.sys.mjs
     architecture = "aarch64" if abi.startswith("aarch64") else "x64"
     return f"{os_target}_{abi}-{architecture}"
+
+
+def tool(directory, name):
+    path = directory / (f"{name}.exe" if sys.platform == "win32" else name)
+    if not path.is_file():
+        sys.exit(f"No {path}: build with --enable-updater")
+    return path
 
 
 def main():
@@ -59,16 +72,25 @@ def main():
     parser.add_argument("--keys", required=True, type=Path)
     parser.add_argument("--base-url", help="Where the .mar will be, instead of the GitHub release (for a test)")
     parser.add_argument("--display-version", help="Instead of browser/config/akhi_version.txt (for a test)")
+    parser.add_argument(
+        "--package",
+        type=Path,
+        help="The app to update to, instead of the one ./mach package made (on macOS: the signed AkhiBrowser.app)",
+    )
     args = parser.parse_args()
 
     dist = args.objdir.resolve() / "dist"
     package = dist / "akhibrowser"
+    if sys.platform == "darwin":
+        package = package / "AkhiBrowser.app"
+    package = args.package.resolve() if args.package else package
     if not package.is_dir():
         sys.exit(f"No {package}: run ./mach package first")
+    resources = package / "Contents/Resources" if package.suffix == ".app" else package
     version = args.display_version or release_version()
 
     ini = configparser.ConfigParser()
-    ini.read(package / "application.ini", encoding="utf-8")
+    ini.read(resources / "application.ini", encoding="utf-8")
     app_version = ini["App"]["Version"]
     build_id = ini["App"]["BuildID"]
     platform_version = ini["Gecko"]["MaxVersion"] if "Gecko" in ini else app_version
@@ -82,10 +104,10 @@ def main():
     unsigned = out / f"{name}.unsigned"
     signed = out / name
 
-    (package / "precomplete").touch()
+    (resources / "precomplete").touch()
     environment = dict(
         os.environ,
-        MAR=(dist / "host/bin/mar.exe").as_posix(),
+        MAR=tool(dist / "host/bin", "mar").as_posix(),
         MOZ_PRODUCT_VERSION=app_version,
         MAR_CHANNEL_ID=MAR_CHANNEL_ID,
         MOZ_FULL_PRODUCT_VERSION=app_version,
@@ -104,8 +126,14 @@ def main():
         check=True,
     )
 
-    environment = dict(os.environ, PATH=f"{dist / 'bin'}{os.pathsep}{os.environ['PATH']}")
-    signmar = str(dist / "bin/signmar.exe")
+    libraries = str(dist / "bin")
+    environment = dict(
+        os.environ,
+        PATH=f"{libraries}{os.pathsep}{os.environ['PATH']}",
+        LD_LIBRARY_PATH=libraries,
+        DYLD_LIBRARY_PATH=libraries,
+    )
+    signmar = str(tool(dist / "bin", "signmar"))
     subprocess.run(
         [signmar, "-d", str(args.keys), "-n", KEY_NICKNAME, "-s", str(unsigned), str(signed)],
         env=environment,
