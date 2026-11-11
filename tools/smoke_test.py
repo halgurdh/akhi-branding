@@ -14,6 +14,7 @@ import subprocess
 import sys
 import tempfile
 from pathlib import Path
+from urllib.parse import unquote
 
 PAGES = [
     {"name": "1-ordinary-site", "url": "https://www.wikipedia.org/", "screenshot": True},
@@ -31,7 +32,8 @@ def check(name, url):
         return "wikipedia.org" in url, "Wikipedia"
     if name in ("2-adult-site", "3-adult-subdomain", "4-haram-search"):
         return blocked, "the block page"
-    return "google." in url and "safe=active" in url, "Google with safe=active"
+    # Google may answer a cloud machine with its robot check (/sorry/), which keeps the search it was asked for
+    return "google." in url and "safe=active" in unquote(url), "Google with safe=active"
 
 
 def free_port():
