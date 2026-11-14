@@ -1,0 +1,25 @@
+# Mails the user through the license server's /ops/notify: gh workflow run mail.yml --repo halgurdh/akhi-branding
+#   -f subject="..." -f text="..."
+name: Mail
+
+on:
+  workflow_dispatch:
+    inputs:
+      subject:
+        required: true
+      text:
+        required: true
+
+jobs:
+  mail:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send
+        env:
+          AKHI_OPS_TOKEN: ${{ secrets.AKHI_OPS_TOKEN }}
+          SUBJECT: ${{ inputs.subject }}
+          TEXT: ${{ inputs.text }}
+        run: |
+          jq -n --arg subject "$SUBJECT" --arg text "$TEXT" '{subject: $subject, text: $text}' |
+            curl -fsS -m 30 -X POST https://akhi-license.akhibrowser.workers.dev/ops/notify \
+              -H "Authorization: Bearer $AKHI_OPS_TOKEN" -H "Content-Type: application/json" --data-binary @-
