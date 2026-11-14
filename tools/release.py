@@ -61,8 +61,10 @@ CRITICAL_SMOKE = [
     "0 Family", "1 ordinary", "2 adult site", "3 adult subdomain", "4 haram search", "5 Google SafeSearch",
     "10 block list", "11 allow only", "14 internet pause",
 ]
+TARGETS = ["windows", "android", "play", "msstore"]
 STEPS = ["pull", "version", "desktop", "smoke", "android", "sums", "drive", "upload", "push"]
 
+STARTED = time.time()
 notes = []
 tasks = []
 
@@ -154,16 +156,18 @@ def touch_clobber():
             (objdir / "CLOBBER").touch()
 
 
-def desktop(version, final):
+def desktop(version, final, targets):
     mach("build", config=DESKTOP_CONFIG)
     run(sys.executable, TOOLS / "build_windows.py", env={"MOZCONFIG": DESKTOP_CONFIG})
     installer = max((DESKTOP_OBJ / "dist").glob("akhibrowser-*.win64.installer.exe"), key=os.path.getmtime)
     shutil.copy2(installer, final / f"AkhiBrowser-{version}-windows-x64-setup.exe")
-    run(sys.executable, TOOLS / "make_update.py", "--objdir", DESKTOP_OBJ, "--keys", UPDATE_KEYS)
-    update = DESKTOP_OBJ / "dist/update"
-    shutil.copy2(update / f"AkhiBrowser-{version}-windows-x64.complete.mar", final)
-    shutil.copy2(update / "update-WINNT_x86_64-msvc-x64.xml", final)
-    run(sys.executable, TOOLS / "build_msstore.py", "--package-only", *MSSTORE_IDENTITY)
+    if "windows" in targets:
+        run(sys.executable, TOOLS / "make_update.py", "--objdir", DESKTOP_OBJ, "--keys", UPDATE_KEYS)
+        update = DESKTOP_OBJ / "dist/update"
+        shutil.copy2(update / f"AkhiBrowser-{version}-windows-x64.complete.mar", final)
+        shutil.copy2(update / "update-WINNT_x86_64-msvc-x64.xml", final)
+    if "msstore" in targets:
+        run(sys.executable, TOOLS / "build_msstore.py", "--package-only", *MSSTORE_IDENTITY)
 
 
 def smoke(version, final):
@@ -226,26 +230,31 @@ def version_code(apk):
     return int(re.search(r"versionCode='(\d+)'", badging).group(1))
 
 
-def android(version, final):
+def android(version, final, targets):
     env = {"MOZ_BUILD_DATE": datetime.now().strftime("%Y%m%d%H%M%S")}
     mach("build", config=ANDROID_CONFIG, env=env)
     extension = ROOT / "artifacts/release-extension"
     shutil.rmtree(extension, ignore_errors=True)
     run("node", TOOLS / "merge_akhi_extension.mjs", extension)
-    mach(
-        "gradle",
-        ":fenix:assembleRelease",
-        config=ANDROID_CONFIG,
-        env={**env, "AKHI_EXTENSION_DIR": extension.as_posix(), "AKHI_SIGNING_PROPERTIES": SIGNING.as_posix()},
-    )
-    apk = final / f"AkhiBrowser-{version}-android-arm64-v8a.apk"
-    shutil.copy2(
-        ANDROID_OBJ / "gradle/build/mobile/android/fenix/app/outputs/apk/release/fenix-arm64-v8a-release.apk", apk
-    )
-    run(sys.executable, TOOLS / "build_play.py", "--signing", SIGNING, env={"MOZCONFIG": ANDROID_CONFIG, **env})
+    apks = []
+    if "android" in targets:
+        mach(
+            "gradle",
+            ":fenix:assembleRelease",
+            config=ANDROID_CONFIG,
+            env={**env, "AKHI_EXTENSION_DIR": extension.as_posix(), "AKHI_SIGNING_PROPERTIES": SIGNING.as_posix()},
+        )
+        apk = final / f"AkhiBrowser-{version}-android-arm64-v8a.apk"
+        shutil.copy2(
+            ANDROID_OBJ / "gradle/build/mobile/android/fenix/app/outputs/apk/release/fenix-arm64-v8a-release.apk", apk
+        )
+        apks.append(apk)
+    if "play" in targets:
+        run(sys.executable, TOOLS / "build_play.py", "--signing", SIGNING, env={"MOZCONFIG": ANDROID_CONFIG, **env})
+        apks.append(ROOT / f"artifacts/play-{version}/AkhiBrowser-{version}-play-universal.apk")
     state = json.loads(STATE.read_text()) if STATE.exists() else {"versionCode": FIRST_VERSION_CODE}
-    universal = ROOT / f"artifacts/play-{version}/AkhiBrowser-{version}-play-universal.apk"
-    codes = {apk.name: version_code(apk), universal.name: version_code(universal)}
+    codes = {path.name: version_code(path) for path in apks}
+    apk = apks[0]
     for name, code in codes.items():
         if code <= state["versionCode"]:
             raise RuntimeError(f"{name} has version code {code}, not higher than the last release's {state['versionCode']}")
@@ -270,24 +279,32 @@ def sums(version, final):
         f"AkhiBrowser-{version}-windows-x64-setup.exe",
         f"AkhiBrowser-{version}-windows-x64.complete.mar",
     ]
-    lines = [f"{hashlib.sha256((final / name).read_bytes()).hexdigest()} *{name}" for name in names]
+    lines = [f"{hashlib.sha256((final / name).read_bytes()).hexdigest()} *{name}" for name in names if (final / name).exists()]
+    if not lines:
+        return
     (final / "SHA256SUMS.txt").write_text("\n".join(lines) + "\n", newline="\n")
 
 
-def release_files(version, final):
-    return [
-        final / f"AkhiBrowser-{version}-android-arm64-v8a.apk",
-        final / f"AkhiBrowser-{version}-windows-x64-setup.exe",
-        final / f"AkhiBrowser-{version}-windows-x64.complete.mar",
-        final / "update-WINNT_x86_64-msvc-x64.xml",
-        final / "SHA256SUMS.txt",
-        ROOT / f"artifacts/play-{version}/AkhiBrowser-{version}-play.aab",
-        ROOT / f"artifacts/play-{version}/AkhiBrowser-{version}-play-universal.apk",
-        ROOT / f"artifacts/msstore-{version}/AkhiBrowser-{version}-x64.msix",
-    ]
+def release_files(version, final, targets=TARGETS):
+    files = {
+        "android": [final / f"AkhiBrowser-{version}-android-arm64-v8a.apk"],
+        "windows": [
+            final / f"AkhiBrowser-{version}-windows-x64-setup.exe",
+            final / f"AkhiBrowser-{version}-windows-x64.complete.mar",
+            final / "update-WINNT_x86_64-msvc-x64.xml",
+        ],
+        "play": [ROOT / f"artifacts/play-{version}/AkhiBrowser-{version}-play.aab"],
+        "msstore": [ROOT / f"artifacts/msstore-{version}/AkhiBrowser-{version}-x64.msix"],
+    }
+    chosen = [path for target in TARGETS if target in targets for path in files[target]]
+    if {"android", "windows"} & set(targets):
+        chosen.append(final / "SHA256SUMS.txt")
+    if "play" in targets and "android" in targets:
+        chosen.append(ROOT / f"artifacts/play-{version}/AkhiBrowser-{version}-play-universal.apk")
+    return chosen
 
 
-def drive(version, final):
+def drive(version, final, targets):
     if not DRIVE.exists():
         raise RuntimeError(f"{DRIVE} isn't there: is Google Drive for desktop running?")
     old_versions = {
@@ -302,9 +319,10 @@ def drive(version, final):
         for path in [*DRIVE.glob("AkhiBrowser-*"), DRIVE / "SHA256SUMS.txt", DRIVE / "update-WINNT_x86_64-msvc-x64.xml"]:
             if path.is_file() and f"-{version}-" not in path.name:
                 shutil.move(str(path), str(old / path.name))
-    for path in release_files(version, final):
+    copied = [path for path in release_files(version, final, targets) if path.exists() and path.stat().st_mtime >= STARTED]
+    for path in copied:
         shutil.copy2(path, DRIVE)
-    notes.append(f"On Drive: {', '.join(path.name for path in release_files(version, final))}")
+    notes.append(f"On Drive: {', '.join(path.name for path in copied)}")
 
 
 def upload_play(version, track, release_notes):
@@ -365,6 +383,7 @@ def main():
     parser.add_argument("version")
     parser.add_argument("--skip", default="", help=f"Steps to leave out, separated by commas: {','.join(STEPS)}")
     parser.add_argument("--only", default="", help="Only these steps, separated by commas")
+    parser.add_argument("--targets", default=",".join(TARGETS), help=f"What to build: {','.join(TARGETS)}")
     parser.add_argument("--upload", default="", help="play, msstore and/or github, separated by commas")
     parser.add_argument("--play-track", default="internal")
     parser.add_argument("--msstore-commit", action="store_true", help="Send the submission to certification")
@@ -376,6 +395,11 @@ def main():
     steps = [step for step in (args.only.split(",") if args.only else STEPS) if step not in args.skip.split(",")]
     if not args.push and "push" in steps:
         steps.remove("push")
+    targets = [item for item in args.targets.split(",") if item]
+    if not {"windows", "msstore"} & set(targets):
+        steps = [step for step in steps if step not in ("desktop", "smoke")]
+    if not {"android", "play"} & set(targets):
+        steps = [step for step in steps if step != "android"]
     uploads = [item for item in args.upload.split(",") if item]
     version = args.version
     final = ROOT / f"artifacts/final-{version}"
@@ -391,16 +415,16 @@ def main():
                 set_version(version)
             elif current == "desktop":
                 touch_clobber()
-                desktop(version, final)
+                desktop(version, final, targets)
             elif current == "smoke":
                 smoke(version, final)
             elif current == "android":
                 touch_clobber()
-                code = android(version, final)
+                code = android(version, final, targets)
             elif current == "sums":
                 sums(version, final)
             elif current == "drive":
-                drive(version, final)
+                drive(version, final, targets)
             elif current == "upload":
                 if "play" in uploads:
                     upload_play(version, args.play_track, args.notes)
