@@ -150,10 +150,12 @@ def set_version(version):
         git("commit", "-q", "-m", f"AkhiBrowser {version}")
 
 
-def touch_clobber():
-    for objdir in (DESKTOP_OBJ, ANDROID_OBJ):
-        if objdir.exists():
-            (objdir / "CLOBBER").touch()
+def touch_clobber(objdir, config, clobber):
+    """A checkout makes CLOBBER newer than the objdir's: a real clobber when asked, else the objdir counts as clobbered."""
+    if clobber:
+        mach("clobber", "objdir", "--full", config=config)
+    elif objdir.exists():
+        (objdir / "CLOBBER").touch()
 
 
 def desktop(version, final, targets):
@@ -389,6 +391,7 @@ def main():
     parser.add_argument("--msstore-commit", action="store_true", help="Send the submission to certification")
     parser.add_argument("--notes", default="", help="Release notes for the stores and GitHub")
     parser.add_argument("--push", action="store_true")
+    parser.add_argument("--clobber", action="store_true", help="Build from scratch, when CLOBBER asks for it")
     parser.add_argument("--shutdown", action="store_true", help="Shut the PC down 15 minutes after a good release")
     args = parser.parse_args()
 
@@ -414,12 +417,12 @@ def main():
             elif current == "version":
                 set_version(version)
             elif current == "desktop":
-                touch_clobber()
+                touch_clobber(DESKTOP_OBJ, DESKTOP_CONFIG, args.clobber)
                 desktop(version, final, targets)
             elif current == "smoke":
                 smoke(version, final)
             elif current == "android":
-                touch_clobber()
+                touch_clobber(ANDROID_OBJ, ANDROID_CONFIG, args.clobber)
                 code = android(version, final, targets)
             elif current == "sums":
                 sums(version, final)
