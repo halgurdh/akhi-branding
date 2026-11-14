@@ -1,0 +1,78 @@
+# The "Release" button: builds a whole AkhiBrowser release with tools/release.py on the PC's self-hosted runner (label
+# akhi-release), in its own tree of akhiBrowser, so the signing keys and the objdirs never leave that PC. It runs from
+# this private repository, as a self-hosted runner on the public akhiBrowser would run the code of anyone's pull request.
+# Needs the secret AKHI_OPS_TOKEN (the license server's /ops/notify) for the mail at the end.
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version, like 1.3.3"
+        required: true
+      notes:
+        description: "Release notes (stores, GitHub)"
+        default: ""
+      play:
+        description: "Upload to Google Play"
+        type: boolean
+        default: true
+      play_track:
+        description: "Play track (internal goes to testers at once, others stay a draft)"
+        type: choice
+        options: [internal, alpha, beta, production]
+        default: internal
+      msstore:
+        description: "Upload to the Microsoft Store"
+        type: boolean
+        default: true
+      msstore_commit:
+        description: "Send the Microsoft Store submission to certification (else a draft)"
+        type: boolean
+        default: false
+      github:
+        description: "GitHub release with the APK, setup.exe and update"
+        type: boolean
+        default: false
+      push:
+        description: "Push main of the tree and the submodules"
+        type: boolean
+        default: true
+      shutdown:
+        description: "Shut the PC down 15 minutes after"
+        type: boolean
+        default: false
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: [self-hosted, windows, akhi-release]
+    timeout-minutes: 720
+    steps:
+      - name: Build, test, hand over
+        shell: powershell
+        env:
+          AKHI_OPS_TOKEN: ${{ secrets.AKHI_OPS_TOKEN }}
+          VERSION: ${{ inputs.version }}
+          NOTES: ${{ inputs.notes }}
+          PLAY_TRACK: ${{ inputs.play_track }}
+          PYTHONUNBUFFERED: "1"
+        run: |
+          $ErrorActionPreference = "Continue"
+          $tree = if ($env:AKHI_TREE) { $env:AKHI_TREE } else { "J:\Projects\akhiBrowser" }
+          Set-Location $tree
+          $uploads = @()
+          if ("${{ inputs.play }}" -eq "true") { $uploads += "play" }
+          if ("${{ inputs.msstore }}" -eq "true") { $uploads += "msstore" }
+          if ("${{ inputs.github }}" -eq "true") { $uploads += "github" }
+          $arguments = @("browser/branding/akhi/tools/release.py", $env:VERSION, "--notes", $env:NOTES,
+            "--play-track", $env:PLAY_TRACK, "--upload", ($uploads -join ","))
+          if ("${{ inputs.msstore_commit }}" -eq "true") { $arguments += "--msstore-commit" }
+          if ("${{ inputs.push }}" -eq "true") { $arguments += "--push" }
+          if ("${{ inputs.shutdown }}" -eq "true") { $arguments += "--shutdown" }
+          New-Item -ItemType Directory -Force artifacts | Out-Null
+          python @arguments 2>&1 | Tee-Object -FilePath "artifacts/release-$env:VERSION.log"
+          exit $LASTEXITCODE
