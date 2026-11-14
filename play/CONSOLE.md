@@ -13,10 +13,24 @@ For the build made by `tools/build_play.py`. Upload the `.aab`, never the APK: P
      builds then share a signer, but Google holds a copy of that key.
 3. **Privacy policy.** Commit and push `PRIVACY.md`. Its URL is
    `https://github.com/halgurdh/akhiBrowser/blob/main/PRIVACY.md`.
-4. **In-app products**, with exactly these ids, or buying fails (see `AkhiStore.kt`):
-   - Subscription `akhi_premium` with base plans `monthly` (€3.33) and `yearly` (€35.00)
-   - Subscription `akhi_family` with base plan `family` (€49.99, renews every year)
-   - One-time product `akhi_premium_lifetime` (€99.99)
+4. **In-app products**, with exactly these ids, or buying fails (see `AkhiStore.kt`). The prices are the website's:
+   - Subscription `akhi_premium` with base plans `monthly` (€3.99) and `yearly` (€39.00)
+   - Subscription `akhi_family` with base plan `family` (€59.99, renews every year), with two offers:
+     - `trial`: eligibility "New customer acquisition", a 3-day free trial
+     - `vip`: eligibility "Developer determined", 10% off (€53.99), recurring for as long as the Console allows. The app
+       buys it only for users who installed from a VIP's link (`referrer=ref%3D<code>`)
+     - Turn on family sharing for it if the Console offers it, so children with their own Google account get Family too
+   - One-time product `akhi_premium_lifetime` (€119)
+   - One-time product `akhi_family_year` (€59.99): a year of Family, never offered in the app, only given with promo codes
+     (gifts on the license server's `/redeem`, schools' `/school`)
+   - One-time product `akhi_family_gift` (€59.99): "Give Family Premium" in the app; the app consumes it once the server
+     gave its code
+5. **License server access** (keys for Play buyers, gifts, school codes, VIP commission): in Google Cloud, enable the
+   "Google Play Android Developer API", create a service account and a JSON key. In Users and permissions, invite its
+   email for AkhiBrowser with "View financial data, orders, and cancellation survey responses". It can take up to a day
+   to work. Then `npx wrangler secret put PLAY_SERVICE_ACCOUNT` in `akhibrowser-premium/server`, and deploy.
+6. **Promo codes**, each quarter (500 one-time codes a quarter, unused ones end with it): Monetize with Play, Promo codes,
+   for `akhi_family_year`. Download the CSV and load it: see "Google Play" in `akhibrowser-premium/server/README.md`.
 
 ## App access
 
