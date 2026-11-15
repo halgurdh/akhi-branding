@@ -1,0 +1,19 @@
+# AkhiBrowser for Windows x64, release build, cross-compiled on Linux (the GitHub workflow "AkhiBrowser Windows").
+# configure downloads Mozilla's toolchains for it (clang-cl, the Windows SDK and MSVC libraries, NSIS, wine, upx).
+# Use with: python browser/branding/akhi/tools/build_windows_cross.py
+
+ac_add_options --enable-project=browser
+ac_add_options --target=x86_64-pc-windows-msvc
+ac_add_options --enable-bootstrap
+ac_add_options --with-branding=browser/branding/akhi
+ac_add_options --with-app-basename=AkhiBrowser
+# No Mozilla update server or crash report server: AkhiBrowser isn't a Mozilla product
+# Updates come from the GitHub releases, signed with AkhiBrowser's key: see tools/make_update.py
+ac_add_options --enable-updater
+ac_add_options --disable-maintenance-service
+ac_add_options --disable-bits-download
+export MAR_CHANNEL_ID=akhibrowser-release
+export ACCEPTED_MAR_CHANNEL_IDS=akhibrowser-release
+ac_add_options --disable-crashreporter
+
+mk_add_options MOZ_OBJDIR=@TOPSRCDIR@/obj-akhi-windows-x64
