@@ -13,7 +13,8 @@
 6. sums and Drive: SHA256SUMS.txt, the files to G:/My Drive/AkhiRelease and the previous version's to a subfolder
 7. uploads, only those asked: Play (internal track, or a draft on another), the Microsoft Store (a draft unless
    --msstore-commit) and a GitHub release with the files of github-release-contents
-8. --push: pushes main of the submodules and the tree
+8. --push: pushes main of the submodules and the tree, then makes the GitHub release (so its tag is the new main),
+   and with --linux-macos starts the Linux and macOS builds on GitHub, which attach themselves to it
 
 The mail goes through the license server's /ops/notify, with AKHI_OPS_TOKEN from the environment or KEYS/ops-token.txt.
 The GitHub workflow "Release" of akhi-branding runs this on the self-hosted runner of this PC.
@@ -373,6 +374,13 @@ def upload_github(version, final, release_notes):
     notes.append(f"GitHub release v{version} published")
 
 
+def linux_macos(version):
+    for workflow in ("akhi-linux.yml", "akhi-macos.yml"):
+        run("gh", "workflow", "run", workflow, "--repo", "halgurdh/akhiBrowser", "--ref", "main",
+            "-f", f"ref=v{version}", "-f", f"release_tag=v{version}")
+    notes.append("Linux and macOS are building on GitHub (a few hours): they attach themselves to the release")
+
+
 def push():
     for path in SUBMODULES:
         git("push", "-q", "origin", "main", cwd=ROOT / path)
@@ -391,6 +399,8 @@ def main():
     parser.add_argument("--msstore-commit", action="store_true", help="Send the submission to certification")
     parser.add_argument("--notes", default="", help="Release notes for the stores and GitHub")
     parser.add_argument("--push", action="store_true")
+    parser.add_argument("--linux-macos", action="store_true",
+                        help="After the GitHub release, build Linux and macOS on GitHub and attach them to it")
     parser.add_argument("--clobber", action="store_true", help="Build from scratch, when CLOBBER asks for it")
     parser.add_argument("--shutdown", action="store_true", help="Shut the PC down 15 minutes after a good release")
     args = parser.parse_args()
@@ -433,10 +443,14 @@ def main():
                     upload_play(version, args.play_track, args.notes)
                 if "msstore" in uploads:
                     upload_msstore(version, args.msstore_commit)
-                if "github" in uploads:
+                if "github" in uploads and "push" not in steps:
                     upload_github(version, final, args.notes)
             elif current == "push":
                 push()
+                if "github" in uploads:
+                    upload_github(version, final, args.notes)
+                    if args.linux_macos:
+                        linux_macos(version)
         if "android" in steps:
             STATE.write_text(json.dumps({"version": version, "versionCode": code}))
     except Exception as e:

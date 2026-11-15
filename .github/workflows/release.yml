@@ -33,7 +33,11 @@ on:
       github:
         description: "GitHub release with the APK, setup.exe and update"
         type: boolean
-        default: false
+        default: true
+      linux_macos:
+        description: "Linux and macOS: built on GitHub after the GitHub release, attached to it"
+        type: boolean
+        default: true
       push:
         description: "Push main of the tree and the submodules"
         type: boolean
@@ -72,6 +76,7 @@ jobs:
             "--play-track", $env:PLAY_TRACK, "--upload", ($uploads -join ","))
           if ("${{ inputs.msstore_commit }}" -eq "true") { $arguments += "--msstore-commit" }
           if ("${{ inputs.push }}" -eq "true") { $arguments += "--push" }
+          if ("${{ inputs.linux_macos }}" -eq "true") { $arguments += "--linux-macos" }
           if ("${{ inputs.shutdown }}" -eq "true") { $arguments += "--shutdown" }
           New-Item -ItemType Directory -Force artifacts | Out-Null
           python @arguments 2>&1 | Tee-Object -FilePath "artifacts/release-$env:VERSION.log"
