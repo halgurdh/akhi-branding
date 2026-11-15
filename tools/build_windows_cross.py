@@ -25,9 +25,12 @@ def main():
         sys.exit("This cross-compiles on Linux; on Windows, use build_windows.py")
 
     build_and_package("akhi-windows-x64-cross", OBJDIR)
-    installers = sorted((OBJDIR / "dist/install/sea").glob("*.exe"), key=lambda p: p.stat().st_mtime)
+    installers = sorted(
+        [*(OBJDIR / "dist").glob("*.installer.exe"), *(OBJDIR / "dist/install/sea").glob("*.exe")],
+        key=lambda p: p.stat().st_mtime,
+    )
     if not installers:
-        sys.exit(f"No installer in {OBJDIR / 'dist/install/sea'}")
+        sys.exit(f"No installer in {OBJDIR / 'dist'}")
     print(release_copy(installers[-1], "AkhiBrowser-windows-x64-setup.exe"))
     zips = sorted((OBJDIR / "dist").glob("akhibrowser-*.zip"), key=lambda p: p.stat().st_mtime)
     if zips:
