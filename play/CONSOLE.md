@@ -74,18 +74,37 @@ Google asks for a short video of each: record the download, the media notificati
 
 ## Data safety
 
-| Data | Collected | Shared | Purpose | Optional |
-| --- | --- | --- | --- | --- |
-| Web browsing history (site names, to Cloudflare's DNS) | Yes | No, service provider | App functionality, security | Yes, can be turned off |
-| Email address (only with Sync, to Mozilla) | Yes | No | Account management | Yes |
-| Crash logs, diagnostics (only if turned on, to Mozilla) | Yes | No | Analytics, stability | Yes |
+Since 1.3 the app also talks to AkhiBrowser's own license server (akhi-license.akhibrowser.workers.dev), so the form
+has more than the Firefox parts. Each row is optional: nothing here is needed to browse.
 
-- Encrypted in transit: yes.
-- Way to request deletion: there is no AkhiBrowser account or data held by the developer. Sync data is deleted in the
-  Mozilla account.
-- Camera, microphone and location go only to the site the user allows them for, at the user's request. **Check this
-  against Google's current form:** Claude reasoned that this isn't collection by the app, but this isn't legal advice.
-- Purchases are handled by Google Play. **Check Google's guidance on the Play Billing library when answering.**
+| Data type (Google's name) | Collected | Shared | Purpose | Optional | When |
+| --- | --- | --- | --- | --- | --- |
+| Web browsing history | Yes | No (Cloudflare is a service provider) | App functionality, Fraud prevention, security and compliance | Yes | Site names go to Cloudflare's family DNS to block adult sites |
+| Email address | Yes | No | App functionality, Account management | Yes | Only when the user asks: "email me my key", the parent report, a gift's recipient, Sync (to Mozilla) |
+| Purchase history | Yes | No | App functionality | Yes | The Play purchase token goes to the license server only when the user asks for a key, a gift code or the parent report |
+| Device or other IDs | Yes | No | App functionality, Fraud prevention, security and compliance | Yes | A random install id with a Premium key, kept hashed, so a key works on a limited number of devices |
+| App interactions / Other app performance data | Yes | No | Analytics | Yes | The anonymous daily count (version, system, plan; no id); off under "Count me anonymously" |
+| Crash logs, Diagnostics | Yes | No | Analytics | Yes | Only if turned on, to Mozilla |
+
+- Is all collected data encrypted in transit? **Yes** (HTTPS and TLS mail).
+- Do you provide a way for users to request that their data is deleted? **Yes**: https://akhibrowser.com/delete-account/
+- Camera, microphone and location go only to the site the user allows them for, at the user's request, not to the
+  developer. **Check this against Google's current form:** Claude reasoned that this isn't collection by the app, but
+  this isn't legal advice.
+- Payments are handled by Google Play; the app never sees card details.
+- **Keep the privacy policy in step:** item t45 ("The server keeps no names, emails or browsing data") predates the email
+  features; it should name the emails kept for a key mail, the parent report and gifts, and the Play purchase token.
+
+## Account deletion (App content, Data deletion)
+
+- Does your app allow users to create an account? **No** account inside the app: a Premium key isn't an account. Google
+  still asks for a deletion URL because the app sends an email address and a purchase token to the license server.
+- Delete account URL: **https://akhibrowser.com/delete-account/** (also /nl/ and /ar/). It covers the Mozilla account
+  (Sync), Play purchases (cancel in the Play Store), license keys (only hashes, a device's dropped after 30 days unused),
+  the parent emails (turn the report off or use the stop link; the address is then removed), data on the device, and
+  support@akhibrowser.com for anything else.
+- Can users delete some data without deleting the account? **Yes**: turning off the parent report or the anonymous
+  count stops it; a device unused for 30 days drops off its key by itself.
 
 ## Listing
 
