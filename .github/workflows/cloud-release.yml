@@ -16,7 +16,7 @@ name: Sign and publish the GitHub builds
 
 on:
   push:
-    branches: [claude/windows-cross]
+    branches: [main]
     paths: [.github/workflows/cloud-release.yml, tools/sign_mar.py]
   workflow_dispatch:
     inputs:
@@ -38,6 +38,14 @@ on:
         type: choice
         options: [draft, certification, none]
         default: draft
+      version:
+        description: "The version, for the mail (set by akhiBrowser's AkhiBrowser Release)"
+        type: string
+        default: ""
+      notes:
+        description: "Release notes for Google Play"
+        type: string
+        default: ""
 
 concurrency:
   group: cloud-release
@@ -228,15 +236,20 @@ jobs:
 
       - name: To Google Play
         if: github.event_name == 'workflow_dispatch' && inputs.play_track != 'none' && steps.drafts.outputs.android != ''
+        id: play
         env:
           PLAY_KEY: ${{ secrets.AKHI_PLAY_SERVICE_ACCOUNT }}
+          NOTES: ${{ inputs.notes }}
         run: |
           key="$RUNNER_TEMP/play.json"
           printf '%s' "$PLAY_KEY" > "$key"
-          node tools/upload_play.mjs --aab out/*-play.aab --key "$key" --track "${{ inputs.play_track }}"
+          notes=()
+          [ -n "$NOTES" ] && notes=(--notes "$NOTES")
+          node tools/upload_play.mjs --aab out/*-play.aab --key "$key" --track "${{ inputs.play_track }}" "${notes[@]}"
           rm -f "$key"
 
       - name: To the Microsoft Store
+        id: store
         if: github.event_name == 'workflow_dispatch' && inputs.msstore != 'none' && steps.msstore_check.outcome == 'success'
         env:
           SELLER: ${{ secrets.MSSTORE_SELLER_ID }}
@@ -244,3 +257,24 @@ jobs:
           [ -n "$SELLER" ] || { echo "No MSSTORE_ secrets yet"; exit 0; }
           msix=$(ls out/*.msix | head -n 1)
           msstore publish "$msix" -id 9N8KMF22Z6K4 ${{ inputs.msstore == 'draft' && '--noCommit' || '' }}
+
+      - name: Mail how it went
+        if: always() && github.event_name == 'workflow_dispatch'
+        env:
+          AKHI_OPS_TOKEN: ${{ secrets.AKHI_OPS_TOKEN }}
+          VERSION: ${{ inputs.version }}
+          TEXT: |-
+            Signing job: ${{ job.status }}
+            Android: ${{ steps.drafts.outputs.android || 'none' }}, Windows: ${{ steps.drafts.outputs.windows || 'none' }}
+            Google Play (${{ inputs.play_track }}): ${{ steps.play.outcome }}
+            Microsoft Store (${{ inputs.msstore }}): store check ${{ steps.msstore_check.outcome }}, upload ${{ steps.store.outcome }}
+        run: |
+          [ -n "$AKHI_OPS_TOKEN" ] || { echo "No AKHI_OPS_TOKEN, not mailed"; exit 0; }
+          subject="AkhiBrowser ${VERSION:-build}: signing ${{ job.status }}"
+          text="$TEXT
+
+          $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+          jq -n --arg subject "$subject" --arg text "$text" '{subject: $subject, text: $text}' |
+            curl -fsS -m 30 -X POST https://akhi-license.akhibrowser.workers.dev/ops/notify \
+              -H "Authorization: Bearer $AKHI_OPS_TOKEN" -H "Content-Type: application/json" --data-binary @- > /dev/null ||
+            echo "The mail didn't go out"
