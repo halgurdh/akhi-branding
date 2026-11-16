@@ -9,6 +9,8 @@
 #   .akhibrowser-update-keys/primary: a secret holds 48 KB, the zip of those mostly empty files fits) with
 #   AKHI_UPDATE_NSS_PASSWORD if that database has one, or
 #   AKHI_UPDATE_KEY_P12 and AKHI_UPDATE_KEY_P12_PASSWORD (the key exported with pk12util)
+# For the Microsoft Store (optional): MSSTORE_TENANT_ID, MSSTORE_CLIENT_ID, MSSTORE_CLIENT_SECRET, MSSTORE_SELLER_ID,
+# of a Microsoft Entra application added in Partner Center (Account settings, User management) as Manager
 name: Sign and publish the GitHub builds
 
 on:
@@ -30,6 +32,11 @@ on:
         type: choice
         options: [internal, alpha, beta, production, none]
         default: internal
+      msstore:
+        description: "Microsoft Store: a draft submission with the .msix, or sent to certification"
+        type: choice
+        options: [draft, certification, none]
+        default: draft
 
 concurrency:
   group: cloud-release
@@ -175,6 +182,27 @@ jobs:
           fi
           for f in in/windows/*; do case "$f" in *.unsigned|*update-info.json) ;; *) cp "$f" out/ ;; esac; done
 
+      - name: Microsoft Store CLI
+        id: msstore
+        if: steps.drafts.outputs.windows != ''
+        uses: microsoft/setup-msstore-cli@v1
+        continue-on-error: true
+
+      - name: Microsoft Store check (read only)
+        if: steps.msstore.outcome == 'success'
+        env:
+          TENANT: ${{ secrets.MSSTORE_TENANT_ID }}
+          CLIENT: ${{ secrets.MSSTORE_CLIENT_ID }}
+          SECRET: ${{ secrets.MSSTORE_CLIENT_SECRET }}
+          SELLER: ${{ secrets.MSSTORE_SELLER_ID }}
+        run: |
+          if [ -z "$TENANT" ] || [ -z "$CLIENT" ] || [ -z "$SECRET" ] || [ -z "$SELLER" ]; then
+            echo "No MSSTORE_ secrets yet: the Store is skipped"; exit 0
+          fi
+          msstore reconfigure --tenantId "$TENANT" --clientId "$CLIENT" --clientSecret "$SECRET" --sellerId "$SELLER"
+          msstore submission status 9N8KMF22Z6K4
+          ls out/*.msix 2>/dev/null || echo "This Windows build has no .msix (an older build)"
+
       - name: Put the signed files in a private draft
         run: |
           ls -la out
@@ -201,3 +229,12 @@ jobs:
           printf '%s' "$PLAY_KEY" > "$key"
           node tools/upload_play.mjs --aab out/*-play.aab --key "$key" --track "${{ inputs.play_track }}"
           rm -f "$key"
+
+      - name: To the Microsoft Store
+        if: github.event_name == 'workflow_dispatch' && inputs.msstore != 'none' && steps.msstore.outcome == 'success'
+        env:
+          SELLER: ${{ secrets.MSSTORE_SELLER_ID }}
+        run: |
+          [ -n "$SELLER" ] || { echo "No MSSTORE_ secrets yet"; exit 0; }
+          msix=$(ls out/*.msix | head -n 1)
+          msstore publish "$msix" -id 9N8KMF22Z6K4 ${{ inputs.msstore == 'draft' && '--noCommit' || '' }}

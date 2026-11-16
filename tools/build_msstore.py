@@ -104,7 +104,14 @@ def main():
     parser.add_argument("--publisher", default=PLACEHOLDER_PUBLISHER)
     parser.add_argument("--publisher-display-name", default=PLACEHOLDER_DISPLAY_NAME)
     parser.add_argument("--package-only", action="store_true")
+    parser.add_argument("--objdir", type=Path, help="Instead of obj-akhi-desktop, like the cross build's on GitHub")
+    parser.add_argument("--mozconfig", help="The mozconfig of that objdir")
     args = parser.parse_args()
+    global OBJDIR, MOZCONFIG
+    if args.objdir:
+        OBJDIR = args.objdir.resolve()
+    if args.mozconfig:
+        MOZCONFIG = args.mozconfig
 
     if "." not in args.identity_name:
         sys.exit("--identity-name looks like Vendor.Name, as Partner Center shows it")
