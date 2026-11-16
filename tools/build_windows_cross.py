@@ -11,6 +11,7 @@ The installer isn't Authenticode signed.
 """
 
 import argparse
+import shutil
 import sys
 
 from desktop_build import BRANDING, ROOT, build_and_package, make_update, release_copy, run
@@ -40,8 +41,11 @@ def main():
         make_update(OBJDIR, args.keys)
     else:
         run([sys.executable, str(BRANDING / "tools/make_update.py"), "--objdir", str(OBJDIR), "--unsigned"])
+        release = OBJDIR / "dist/release"
         for path in (OBJDIR / "dist/update").iterdir():
-            print(release_copy(path, path.name))
+            if path.is_file():
+                shutil.copyfile(path, release / path.name)
+                print(release / path.name)
 
 
 if __name__ == "__main__":
