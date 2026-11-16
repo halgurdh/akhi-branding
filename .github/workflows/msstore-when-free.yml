@@ -1,7 +1,7 @@
 # Sends a signed .msix to the Microsoft Store's certification once the submission before it has left certification:
-# the Store takes one submission at a time. Set the repository variable MSSTORE_NEXT to the signed draft in
-# akhi-extension (signed-<run>-<attempt>) and enable this workflow; after the upload it clears nothing but disables
-# itself, so it runs once.
+# the Store takes one submission at a time. Set the repository variable MSSTORE_NEXT to a version (1.3.5: the newest
+# signed draft in akhi-extension with its .msix, signed after MSSTORE_AFTER) or to a signed draft (signed-<run>-<attempt>);
+# after the upload it disables itself, so it runs once.
 name: Microsoft Store when free
 
 on:
@@ -23,6 +23,8 @@ jobs:
     env:
       GH_TOKEN: ${{ secrets.AKHI_SUBMODULES_TOKEN }}
       DRAFT: ${{ vars.MSSTORE_NEXT }}
+      # with a version: only drafts signed after this time (ISO 8601), so an earlier test build isn't taken
+      AFTER: ${{ vars.MSSTORE_AFTER }}
     steps:
       - uses: microsoft/setup-msstore-cli@v1
 
@@ -35,6 +37,13 @@ jobs:
           SELLER: ${{ secrets.MSSTORE_SELLER_ID }}
         run: |
           [ -n "$DRAFT" ] || { echo "No MSSTORE_NEXT set"; echo "free=no" >> "$GITHUB_OUTPUT"; exit 0; }
+          if [[ "$DRAFT" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            msix="AkhiBrowser-$DRAFT-x64.msix"
+            found=$(gh api "repos/halgurdh/akhi-extension/releases?per_page=100" --jq "[.[] | select(.draft and (.tag_name|startswith(\"signed-\")) and .created_at >= \"${AFTER:-0}\" and any(.assets[]; .name == \"$msix\"))] | sort_by(.created_at) | last | .tag_name // empty")
+            [ -n "$found" ] || { echo "No signed $msix yet"; echo "free=no" >> "$GITHUB_OUTPUT"; exit 0; }
+            echo "DRAFT=$found" >> "$GITHUB_ENV"
+            echo "Signed draft: $found"
+          fi
           sudo apt-get install -y -qq libsecret-1-0 gnome-keyring dbus-x11 > /dev/null
           eval "$(dbus-launch --sh-syntax)"
           printf 'ci-keyring' | gnome-keyring-daemon --replace --daemonize --unlock --components=secrets > /dev/null
