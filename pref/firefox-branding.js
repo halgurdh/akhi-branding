@@ -45,12 +45,11 @@ pref("browser.discovery.enabled", false);
 pref("browser.newtabpage.activity-stream.feeds.telemetry", false);
 pref("browser.newtabpage.activity-stream.telemetry", false);
 
-// AkhiBrowser: the new tab has the search box and the user's shortcuts, without stories, widgets, weather or
-// sponsored shortcuts. The default shortcuts are Islamic sites.
+// AkhiBrowser: the new tab has the search box and the user's shortcuts, without stories, widgets or weather. The
+// default shortcuts are Islamic sites.
 pref("browser.newtabpage.activity-stream.feeds.section.topstories", false);
 pref("browser.newtabpage.activity-stream.showSponsored", false);
 pref("browser.newtabpage.activity-stream.system.showSponsored", false);
-pref("browser.newtabpage.activity-stream.showSponsoredTopSites", false);
 pref("browser.newtabpage.activity-stream.showWeather", false);
 pref("browser.newtabpage.activity-stream.system.showWeather", false);
 pref("browser.newtabpage.activity-stream.widgets.enabled", false);
@@ -59,7 +58,14 @@ pref("browser.newtabpage.activity-stream.unifiedAds.tiles.enabled", false);
 pref("browser.newtabpage.activity-stream.unifiedAds.spocs.enabled", false);
 pref("browser.newtabpage.activity-stream.asrouter.userprefs.cfr.addons", false);
 pref("browser.newtabpage.activity-stream.asrouter.userprefs.cfr.features", false);
-pref("browser.topsites.contile.enabled", false);
+// AkhiBrowser: up to 3 shortcuts of AkhiBrowser's own sponsors, from its license server, for free users. Off in the
+// new tab's settings (Sponsored shortcuts), and never with Premium (extensions.akhi.premiumActive, TopSitesFeed).
+// No impression or click callbacks and no Mozilla relay: a click opens the sponsor through the server's counter.
+pref("browser.newtabpage.activity-stream.showSponsoredTopSites", true);
+pref("browser.topsites.contile.enabled", true);
+pref("browser.topsites.contile.endpoint", "https://akhi-license.akhibrowser.workers.dev/tiles");
+pref("browser.newtabpage.activity-stream.unifiedAds.ohttp.enabled", false);
+pref("extensions.akhi.premiumActive", false);
 pref("browser.topsites.useRemoteSetting", false);
 pref("browser.newtabpage.activity-stream.default.sites", "https://quran.com/,https://sunnah.com/,https://www.islamicfinder.org/");
 
