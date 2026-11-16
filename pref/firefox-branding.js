@@ -138,10 +138,12 @@ pref("browser.contentblocking.report.hide_vpn_banner", true);
 pref("extensions.systemAddon.update.enabled", false);
 pref("extensions.systemAddon.update.url", "");
 
-// AkhiBrowser: Settings without Mozilla's own products and pages: no built-in Mozilla VPN, More from Mozilla, Firefox
-// Relay email masks or Firefox Labs, no picker of Firefox's logos as the browser's icon, and AkhiBrowser's privacy
-// page where Settings links to the privacy notice
-pref("browser.ipProtection.enabled", false);
+// AkhiBrowser: Settings without Mozilla's own products and pages: no More from Mozilla, Firefox Relay email masks or
+// Firefox Labs, no picker of Firefox's logos as the browser's icon, and AkhiBrowser's privacy page where Settings links
+// to the privacy notice. The built-in VPN is there (its button and Settings section) but off until the user turns it
+// on, and it doesn't start by itself; without the upsell to the paid Mozilla VPN (privacy.mjs).
+pref("browser.ipProtection.enabled", true);
+pref("browser.ipProtection.features.autoStart", false);
 pref("browser.vpn_promo.enabled", false);
 pref("browser.preferences.moreFromMozilla", false);
 pref("signon.firefoxRelay.feature", "");
