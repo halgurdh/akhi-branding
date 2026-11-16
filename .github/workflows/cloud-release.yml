@@ -46,6 +46,10 @@ on:
         description: "Release notes for Google Play"
         type: string
         default: ""
+      windows_update:
+        description: "Put the signed .mar and its update XML (not the setup.exe) on akhiBrowser's GitHub release v<version>"
+        type: boolean
+        default: false
 
 concurrency:
   group: cloud-release
@@ -224,6 +228,19 @@ jobs:
             --title "Signed builds ${{ github.run_id }}" \
             --notes "Signed from ${{ steps.drafts.outputs.android }} and ${{ steps.drafts.outputs.windows }}"
 
+      # the installs from the old setup.exe update from the latest GitHub release; Windows itself comes from the Store
+      - name: The Windows update on the GitHub release
+        id: windows_update
+        if: github.event_name == 'workflow_dispatch' && inputs.windows_update && inputs.version != '' && steps.drafts.outputs.windows != ''
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          mar="out/AkhiBrowser-$VERSION-windows-x64.complete.mar"
+          xml=out/update-WINNT_x86_64-msvc-x64.xml
+          [ -f "$mar" ] && [ -f "$xml" ] || { echo "No signed update of $VERSION in this build"; exit 1; }
+          grep -q "releases/download/v$VERSION/" "$xml" || { echo "The update XML points elsewhere"; exit 1; }
+          gh release upload "v$VERSION" "$mar" "$xml" --repo halgurdh/akhiBrowser --clobber
+
       - name: Google Play check (dry run, nothing published)
         if: steps.drafts.outputs.android != ''
         env:
@@ -267,6 +284,7 @@ jobs:
             Signing job: ${{ job.status }}
             Android: ${{ steps.drafts.outputs.android || 'none' }}, Windows: ${{ steps.drafts.outputs.windows || 'none' }}
             Google Play (${{ inputs.play_track }}): ${{ steps.play.outcome }}
+            Windows update on GitHub: ${{ steps.windows_update.outcome }}
             Microsoft Store (${{ inputs.msstore }}): store check ${{ steps.msstore_check.outcome }}, upload ${{ steps.store.outcome }}
         run: |
           [ -n "$AKHI_OPS_TOKEN" ] || { echo "No AKHI_OPS_TOKEN, not mailed"; exit 0; }
