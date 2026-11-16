@@ -202,8 +202,8 @@ jobs:
           if [ -z "$TENANT" ] || [ -z "$CLIENT" ] || [ -z "$SECRET" ] || [ -z "$SELLER" ]; then
             echo "No MSSTORE_ secrets yet: the Store is skipped"; exit 0
           fi
-          msstore reconfigure --tenantId "$TENANT" --clientId "$CLIENT" --clientSecret "$SECRET" --sellerId "$SELLER"
-          msstore submission status 9N8KMF22Z6K4
+          msstore reconfigure --tenantId "$TENANT" --clientId "$CLIENT" --clientSecret "$SECRET" --sellerId "$SELLER" --verbose
+          msstore submission status 9N8KMF22Z6K4 --verbose
           ls out/*.msix 2>/dev/null || echo "This Windows build has no .msix (an older build)"
 
       - name: Put the signed files in a private draft
