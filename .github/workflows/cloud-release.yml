@@ -5,8 +5,9 @@
 # The keys are secrets of this private repository only:
 #   AKHI_ANDROID_KEYSTORE (base64 of the .jks), AKHI_ANDROID_STORE_PASSWORD, AKHI_ANDROID_KEY_ALIAS,
 #   AKHI_ANDROID_KEY_PASSWORD, AKHI_PLAY_SERVICE_ACCOUNT (the JSON), AKHI_SUBMODULES_TOKEN (reads and writes releases
-#   of akhi-extension), and the update key: either AKHI_UPDATE_NSS_CERT9 and AKHI_UPDATE_NSS_KEY4 (base64 of cert9.db
-#   and key4.db of .akhibrowser-update-keys/primary) with AKHI_UPDATE_NSS_PASSWORD if that database has one, or
+#   of akhi-extension), and the update key: either AKHI_UPDATE_NSS_ZIP (base64 of a zip of cert9.db and key4.db of
+#   .akhibrowser-update-keys/primary: a secret holds 48 KB, the zip of those mostly empty files fits) with
+#   AKHI_UPDATE_NSS_PASSWORD if that database has one, or
 #   AKHI_UPDATE_KEY_P12 and AKHI_UPDATE_KEY_P12_PASSWORD (the key exported with pk12util)
 name: Sign and publish the GitHub builds
 
@@ -58,13 +59,12 @@ jobs:
           E: ${{ secrets.AKHI_PLAY_SERVICE_ACCOUNT }}
           H: ${{ secrets.AKHI_SUBMODULES_TOKEN }}
           P12: ${{ secrets.AKHI_UPDATE_KEY_P12 }}
-          CERT9: ${{ secrets.AKHI_UPDATE_NSS_CERT9 }}
-          KEY4: ${{ secrets.AKHI_UPDATE_NSS_KEY4 }}
+          NSS_ZIP: ${{ secrets.AKHI_UPDATE_NSS_ZIP }}
         run: |
           missing=0
           if [ -n "$P12" ]; then echo "ok      AKHI_UPDATE_KEY_P12"
-          elif [ -n "$CERT9" ] && [ -n "$KEY4" ]; then echo "ok      AKHI_UPDATE_NSS_CERT9 and AKHI_UPDATE_NSS_KEY4"
-          else echo "MISSING the update key: AKHI_UPDATE_NSS_CERT9 and AKHI_UPDATE_NSS_KEY4"; missing=1; fi
+          elif [ -n "$NSS_ZIP" ]; then echo "ok      AKHI_UPDATE_NSS_ZIP"
+          else echo "MISSING the update key: AKHI_UPDATE_NSS_ZIP"; missing=1; fi
           for pair in A:AKHI_ANDROID_KEYSTORE B:AKHI_ANDROID_STORE_PASSWORD C:AKHI_ANDROID_KEY_ALIAS \
                       D:AKHI_ANDROID_KEY_PASSWORD E:AKHI_PLAY_SERVICE_ACCOUNT H:AKHI_SUBMODULES_TOKEN; do
             name=${pair%%:*}
@@ -151,8 +151,7 @@ jobs:
         env:
           AKHI_UPDATE_KEY_P12: ${{ secrets.AKHI_UPDATE_KEY_P12 }}
           AKHI_UPDATE_KEY_P12_PASSWORD: ${{ secrets.AKHI_UPDATE_KEY_P12_PASSWORD }}
-          CERT9: ${{ secrets.AKHI_UPDATE_NSS_CERT9 }}
-          KEY4: ${{ secrets.AKHI_UPDATE_NSS_KEY4 }}
+          NSS_ZIP: ${{ secrets.AKHI_UPDATE_NSS_ZIP }}
           NSS_PASSWORD: ${{ secrets.AKHI_UPDATE_NSS_PASSWORD }}
         run: |
           if [ ! -f in/windows/update-info.json ]; then
@@ -162,8 +161,8 @@ jobs:
               # the key from the NSS database itself, exported here with NSS's pk12util
               sudo apt-get install -y -qq libnss3-tools > /dev/null
               db="$RUNNER_TEMP/nss"; mkdir -p "$db"
-              printf '%s' "$CERT9" | base64 -d > "$db/cert9.db"
-              printf '%s' "$KEY4" | base64 -d > "$db/key4.db"
+              printf '%s' "$NSS_ZIP" | base64 -d > "$db/nss.zip"
+              unzip -q -j "$db/nss.zip" cert9.db key4.db -d "$db" && rm "$db/nss.zip"
               password=()
               if [ -n "$NSS_PASSWORD" ]; then printf '%s' "$NSS_PASSWORD" > "$db/password"; password=(-k "$db/password"); fi
               export AKHI_UPDATE_KEY_P12_PASSWORD=$(openssl rand -hex 16)
