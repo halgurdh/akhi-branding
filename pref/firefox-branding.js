@@ -137,3 +137,14 @@ pref("browser.contentblocking.report.hide_vpn_banner", true);
 // Firefox's texts and undo AkhiBrowser's changes to them; they update with AkhiBrowser itself
 pref("extensions.systemAddon.update.enabled", false);
 pref("extensions.systemAddon.update.url", "");
+
+// AkhiBrowser: Settings without Mozilla's own products and pages: no built-in Mozilla VPN, More from Mozilla, Firefox
+// Relay email masks or Firefox Labs, no picker of Firefox's logos as the browser's icon, and AkhiBrowser's privacy
+// page where Settings links to the privacy notice
+pref("browser.ipProtection.enabled", false);
+pref("browser.vpn_promo.enabled", false);
+pref("browser.preferences.moreFromMozilla", false);
+pref("signon.firefoxRelay.feature", "");
+pref("browser.preferences.experimental.hidden", true);
+pref("browser.shell.customIcon.enabled", false);
+pref("toolkit.datacollection.infoURL", "https://akhibrowser.com/privacy/");
