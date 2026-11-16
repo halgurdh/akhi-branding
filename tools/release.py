@@ -12,9 +12,9 @@
    file of the merged extension in the APK
 6. sums and Drive: SHA256SUMS.txt, the files to G:/My Drive/AkhiRelease and the previous version's to a subfolder
 7. uploads, only those asked: Play (internal track, or a draft on another), the Microsoft Store (a draft unless
-   --msstore-commit) and a GitHub release with the files of github-release-contents
+   --msstore-commit) and a GitHub release with the release notes only, no files to download
 8. --push: pushes main of the submodules and the tree, then makes the GitHub release (so its tag is the new main),
-   and with --linux-macos starts the Linux and macOS builds on GitHub, which attach themselves to it
+   and with --linux-macos starts the Linux and macOS builds on GitHub (to private drafts, not on the release)
 
 The mail goes through the license server's /ops/notify, with AKHI_OPS_TOKEN from the environment or KEYS/ops-token.txt.
 The GitHub workflow "Release" of akhi-branding runs this on the self-hosted runner of this PC.
@@ -354,31 +354,18 @@ def upload_msstore(version, commit):
 
 
 def upload_github(version, final, release_notes):
-    files = [
-        final / f"AkhiBrowser-{version}-android-arm64-v8a.apk",
-        final / f"AkhiBrowser-{version}-windows-x64-setup.exe",
-        final / f"AkhiBrowser-{version}-windows-x64.complete.mar",
-        final / "update-WINNT_x86_64-msvc-x64.xml",
-        final / "SHA256SUMS.txt",
-    ]
-    latest = ROOT / f"artifacts/github-{version}"
-    latest.mkdir(exist_ok=True)
-    for name, source in (
-        ("AkhiBrowser-windows-x64-setup.exe", files[1]),
-        ("AkhiBrowser-android-arm64-v8a.apk", files[0]),
-    ):
-        shutil.copy2(source, latest / name)
-        files.append(latest / name)
+    # the notes only: AkhiBrowser is downloaded from Google Play and the Microsoft Store, not from GitHub; the files
+    # stay in artifacts/ and on the Drive
     run("gh", "release", "create", f"v{version}", "--repo", "halgurdh/akhiBrowser", "--target", "main", "--latest",
-        "--title", f"AkhiBrowser {version}", "--notes", release_notes or f"AkhiBrowser {version}", *files)
-    notes.append(f"GitHub release v{version} published")
+        "--title", f"AkhiBrowser {version}", "--notes", release_notes or f"AkhiBrowser {version}")
+    notes.append(f"GitHub release v{version} published (notes only)")
 
 
 def linux_macos(version):
     for workflow in ("akhi-linux.yml", "akhi-macos.yml"):
         run("gh", "workflow", "run", workflow, "--repo", "halgurdh/akhiBrowser", "--ref", "main",
-            "-f", f"ref=v{version}", "-f", f"release_tag=v{version}")
-    notes.append("Linux and macOS are building on GitHub (a few hours): they attach themselves to the release")
+            "-f", f"ref=v{version}")
+    notes.append("Linux and macOS are building on GitHub (a few hours), to private draft releases in akhi-extension")
 
 
 def push():
@@ -400,7 +387,7 @@ def main():
     parser.add_argument("--notes", default="", help="Release notes for the stores and GitHub")
     parser.add_argument("--push", action="store_true")
     parser.add_argument("--linux-macos", action="store_true",
-                        help="After the GitHub release, build Linux and macOS on GitHub and attach them to it")
+                        help="After the GitHub release, build Linux and macOS on GitHub (private drafts)")
     parser.add_argument("--clobber", action="store_true", help="Build from scratch, when CLOBBER asks for it")
     parser.add_argument("--shutdown", action="store_true", help="Shut the PC down 15 minutes after a good release")
     args = parser.parse_args()
