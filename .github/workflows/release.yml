@@ -31,11 +31,11 @@ on:
         type: boolean
         default: false
       github:
-        description: "GitHub release with the APK, setup.exe and update"
+        description: "GitHub release with the notes (no files)"
         type: boolean
         default: true
       linux_macos:
-        description: "Linux and macOS: built on GitHub after the GitHub release, attached to it"
+        description: "Linux and macOS: built on GitHub after the GitHub release (private drafts, not on the release)"
         type: boolean
         default: true
       push:
