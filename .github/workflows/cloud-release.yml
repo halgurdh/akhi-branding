@@ -33,7 +33,7 @@ on:
 
 concurrency:
   group: cloud-release
-  cancel-in-progress: false
+  cancel-in-progress: false  # one release at a time
 
 permissions:
   contents: read
