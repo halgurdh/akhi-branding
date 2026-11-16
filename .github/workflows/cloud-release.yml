@@ -190,7 +190,9 @@ jobs:
         continue-on-error: true
 
       - name: Microsoft Store check (read only)
+        id: msstore_check
         if: steps.msstore.outcome == 'success'
+        continue-on-error: true
         env:
           TENANT: ${{ secrets.MSSTORE_TENANT_ID }}
           CLIENT: ${{ secrets.MSSTORE_CLIENT_ID }}
@@ -232,7 +234,7 @@ jobs:
           rm -f "$key"
 
       - name: To the Microsoft Store
-        if: github.event_name == 'workflow_dispatch' && inputs.msstore != 'none' && steps.msstore.outcome == 'success'
+        if: github.event_name == 'workflow_dispatch' && inputs.msstore != 'none' && steps.msstore_check.outcome == 'success'
         env:
           SELLER: ${{ secrets.MSSTORE_SELLER_ID }}
         run: |
