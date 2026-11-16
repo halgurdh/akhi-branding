@@ -148,3 +148,9 @@ pref("signon.firefoxRelay.feature", "");
 pref("browser.preferences.experimental.hidden", true);
 pref("browser.shell.customIcon.enabled", false);
 pref("toolkit.datacollection.infoURL", "https://akhibrowser.com/privacy/");
+
+// AkhiBrowser: Smart Window blocked by default. Its AI chat is Mozilla's service (Mozilla's server, a Mozilla account,
+// memories from the browsing history), which AkhiBrowser's extension can't filter. Can be unblocked in Settings, AI
+// controls.
+pref("browser.ai.control.smartWindow", "blocked");
+pref("browser.smartwindow.enabled", false);
