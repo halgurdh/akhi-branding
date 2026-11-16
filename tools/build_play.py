@@ -69,9 +69,10 @@ def check(is_ok, text):
 
 
 def sdk_tool(relative):
-    sdk = Path.home() / ".mozbuild/android-sdk-windows"
-    if not sdk.exists():
-        sdk = Path(os.environ["ANDROID_HOME"])
+    state = Path(os.environ.get("MOZBUILD_STATE_PATH", Path.home() / ".mozbuild"))
+    names = ("android-sdk-windows", "android-sdk-linux", "android-sdk-macosx")
+    found = [state / name for name in names if (state / name / "build-tools").is_dir()]
+    sdk = found[0] if found else Path(os.environ["ANDROID_HOME"])
     tools = sorted((sdk / "build-tools").iterdir(), key=lambda p: [int(n) for n in p.name.split(".")])
     return tools[-1] / relative
 
