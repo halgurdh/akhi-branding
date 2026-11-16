@@ -33,11 +33,13 @@ def current():
 
 
 def replace_in(path, pattern, version):
-    text = path.read_text(newline="")
+    with path.open(encoding="utf-8", newline="") as file:
+        text = file.read()
     new, count = pattern.subn(rf"\g<1>{version}\g<3>", text, count=1)
     if count != 1:
         sys.exit(f"No version found in {path}")
-    path.write_text(new, newline="")
+    with path.open("w", encoding="utf-8", newline="") as file:
+        file.write(new)
 
 
 def set_version(version):

@@ -9,11 +9,14 @@
 
 Writes to <objdir>/dist/update/ a .mar and the update-<BUILD_TARGET>.xml the browser asks for: upload both to the
 GitHub release. <folder> has the NSS database of the signing key, and never goes in a repository.
+With --unsigned instead of --keys (a build on GitHub), it writes the .mar unsigned and update-info.json, for
+sign_mar.py to sign and to write the .xml.
 """
 
 import argparse
 import configparser
 import hashlib
+import json
 import os
 import re
 import shutil
@@ -66,10 +69,25 @@ def tool(directory, name):
     return path
 
 
+def update_xml(version, app_version, platform_version, build_id, name, data, base_url=None):
+    base = base_url or f"{REPOSITORY}/releases/download/v{version}"
+    return (
+        '<?xml version="1.0" encoding="UTF-8"?>\n<updates>\n'
+        f'  <update type="minor" displayVersion={quoteattr(version)} appVersion={quoteattr(app_version)}'
+        f" platformVersion={quoteattr(platform_version)} buildID={quoteattr(build_id)}"
+        f" detailsURL={quoteattr(f'{REPOSITORY}/releases/tag/v{version}')}>\n"
+        f'    <patch type="complete" URL={quoteattr(f"{base}/{name}")} hashFunction="sha512"'
+        f' hashValue="{hashlib.sha512(data).hexdigest()}" size="{len(data)}"/>\n'
+        "  </update>\n</updates>\n"
+    )
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--objdir", required=True, type=Path)
-    parser.add_argument("--keys", required=True, type=Path)
+    keys = parser.add_mutually_exclusive_group(required=True)
+    keys.add_argument("--keys", type=Path)
+    keys.add_argument("--unsigned", action="store_true", help="Leave the .mar to sign_mar.py")
     parser.add_argument("--base-url", help="Where the .mar will be, instead of the GitHub release (for a test)")
     parser.add_argument("--display-version", help="Instead of browser/config/akhi_version.txt (for a test)")
     parser.add_argument(
@@ -126,6 +144,19 @@ def main():
         check=True,
     )
 
+    if args.unsigned:
+        info = {
+            "name": name,
+            "version": version,
+            "app_version": app_version,
+            "platform_version": platform_version,
+            "build_id": build_id,
+            "target": target,
+        }
+        (out / "update-info.json").write_text(json.dumps(info, indent=2), encoding="utf-8")
+        print(f"{unsigned}\n{out / 'update-info.json'}")
+        return
+
     libraries = str(dist / "bin")
     environment = dict(
         os.environ,
@@ -147,16 +178,7 @@ def main():
     unsigned.unlink()
 
     data = signed.read_bytes()
-    base = args.base_url or f"{REPOSITORY}/releases/download/v{version}"
-    xml = (
-        '<?xml version="1.0" encoding="UTF-8"?>\n<updates>\n'
-        f'  <update type="minor" displayVersion={quoteattr(version)} appVersion={quoteattr(app_version)}'
-        f" platformVersion={quoteattr(platform_version)} buildID={quoteattr(build_id)}"
-        f" detailsURL={quoteattr(f'{REPOSITORY}/releases/tag/v{version}')}>\n"
-        f'    <patch type="complete" URL={quoteattr(f"{base}/{name}")} hashFunction="sha512"'
-        f' hashValue="{hashlib.sha512(data).hexdigest()}" size="{len(data)}"/>\n'
-        "  </update>\n</updates>\n"
-    )
+    xml = update_xml(version, app_version, platform_version, build_id, name, data, args.base_url)
     (out / f"update-{target}.xml").write_text(xml, encoding="utf-8")
     print(f"{signed}\n{out / f'update-{target}.xml'}")
 

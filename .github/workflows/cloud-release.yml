@@ -1,0 +1,246 @@
+# Signs the builds GitHub made without the PC and publishes them: the Android APK and Play bundle of the workflow
+# "AkhiBrowser Android" and the Windows update of "AkhiBrowser Windows" (both in halgurdh/akhiBrowser), taken from their
+# private draft releases in halgurdh/akhi-extension. They come signed with a throwaway key or unsigned; here they're
+# signed with AkhiBrowser's keys, checked, put in a private draft, and with Run workflow sent to a Play track.
+# The keys are secrets of this private repository only:
+#   AKHI_ANDROID_KEYSTORE (base64 of the .jks), AKHI_ANDROID_STORE_PASSWORD, AKHI_ANDROID_KEY_ALIAS,
+#   AKHI_ANDROID_KEY_PASSWORD, AKHI_PLAY_SERVICE_ACCOUNT (the JSON), AKHI_SUBMODULES_TOKEN (reads and writes releases
+#   of akhi-extension), and the update key: either AKHI_UPDATE_NSS_ZIP (base64 of a zip of cert9.db and key4.db of
+#   .akhibrowser-update-keys/primary: a secret holds 48 KB, the zip of those mostly empty files fits) with
+#   AKHI_UPDATE_NSS_PASSWORD if that database has one, or
+#   AKHI_UPDATE_KEY_P12 and AKHI_UPDATE_KEY_P12_PASSWORD (the key exported with pk12util)
+# For the Microsoft Store (optional): MSSTORE_TENANT_ID, MSSTORE_CLIENT_ID, MSSTORE_CLIENT_SECRET, MSSTORE_SELLER_ID,
+# of a Microsoft Entra application (Entra ID, App registrations) added in Partner Center (Account settings, User
+# management, Microsoft Entra applications, Create) as Manager (Windows)
+name: Sign and publish the GitHub builds
+
+on:
+  push:
+    branches: [claude/windows-cross]
+    paths: [.github/workflows/cloud-release.yml, tools/sign_mar.py]
+  workflow_dispatch:
+    inputs:
+      android_draft:
+        description: "Android draft in akhi-extension, like android-build-123-1 (latest: the newest that passed)"
+        type: string
+        default: latest
+      windows_draft:
+        description: "Windows draft in akhi-extension, like windows-build-123-1 (latest: the newest that passed)"
+        type: string
+        default: latest
+      play_track:
+        description: Play track for the bundle
+        type: choice
+        options: [internal, alpha, beta, production, none]
+        default: internal
+      msstore:
+        description: "Microsoft Store: a draft submission with the .msix, or sent to certification"
+        type: choice
+        options: [draft, certification, none]
+        default: draft
+
+concurrency:
+  group: cloud-release
+  cancel-in-progress: false  # one release at a time
+
+permissions:
+  contents: read
+
+jobs:
+  sign:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    env:
+      GH_TOKEN: ${{ secrets.AKHI_SUBMODULES_TOKEN }}
+      DRAFTS: halgurdh/akhi-extension
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Secrets present
+        env:
+          A: ${{ secrets.AKHI_ANDROID_KEYSTORE }}
+          B: ${{ secrets.AKHI_ANDROID_STORE_PASSWORD }}
+          C: ${{ secrets.AKHI_ANDROID_KEY_ALIAS }}
+          D: ${{ secrets.AKHI_ANDROID_KEY_PASSWORD }}
+          E: ${{ secrets.AKHI_PLAY_SERVICE_ACCOUNT }}
+          H: ${{ secrets.AKHI_SUBMODULES_TOKEN }}
+          P12: ${{ secrets.AKHI_UPDATE_KEY_P12 }}
+          NSS_ZIP: ${{ secrets.AKHI_UPDATE_NSS_ZIP }}
+        run: |
+          missing=0
+          if [ -n "$P12" ]; then echo "ok      AKHI_UPDATE_KEY_P12"
+          elif [ -n "$NSS_ZIP" ]; then echo "ok      AKHI_UPDATE_NSS_ZIP"
+          else echo "MISSING the update key: AKHI_UPDATE_NSS_ZIP"; missing=1; fi
+          for pair in A:AKHI_ANDROID_KEYSTORE B:AKHI_ANDROID_STORE_PASSWORD C:AKHI_ANDROID_KEY_ALIAS \
+                      D:AKHI_ANDROID_KEY_PASSWORD E:AKHI_PLAY_SERVICE_ACCOUNT H:AKHI_SUBMODULES_TOKEN; do
+            name=${pair%%:*}
+            if [ -n "${!name}" ]; then echo "ok      ${pair#*:}"; else echo "MISSING ${pair#*:}"; missing=1; fi
+          done
+          exit $missing
+
+      - name: The mardor library, and a self-test of sign_mar.py with a throwaway key
+        run: |
+          pip install --quiet --break-system-packages "mar>=3.2" cryptography
+          t="$RUNNER_TEMP/selftest"; mkdir -p "$t/in"
+          openssl req -x509 -newkey rsa:4096 -nodes -keyout "$t/key.pem" -out "$t/cert.pem" -days 1 -subj "/CN=test" 2>/dev/null
+          openssl x509 -in "$t/cert.pem" -outform DER -out "$t/cert.der"
+          openssl pkcs12 -export -inkey "$t/key.pem" -in "$t/cert.pem" -out "$t/key.p12" -passout pass:test
+          python3 - "$t" <<'PY'
+          import json, sys
+          from pathlib import Path
+          from mardor.writer import MarWriter
+          t = Path(sys.argv[1])
+          (t / "a.txt").write_bytes(b"hello " * 1000)
+          with (t / "in/T.complete.mar.unsigned").open("w+b") as f, MarWriter(f, productversion="1.0", channel="akhibrowser-release") as w:
+              w.add_fileobj((t / "a.txt").open("rb"), "a.txt", compress="xz", flags=0o644)
+              w.add_fileobj((t / "a.txt").open("rb"), "updatev3.manifest", compress=None, flags=0o644)
+          (t / "in/update-info.json").write_text(json.dumps({"name": "T.complete.mar", "version": "1.0", "app_version": "1.0",
+              "platform_version": "1.0", "build_id": "1", "target": "WINNT_x86_64-msvc-x64"}))
+          PY
+          AKHI_UPDATE_KEY_P12=$(base64 -w0 "$t/key.p12") AKHI_UPDATE_KEY_P12_PASSWORD=test \
+            python3 tools/sign_mar.py "$t/in" --certificate "$t/cert.der"
+          test -f "$t/in/update-WINNT_x86_64-msvc-x64.xml"
+
+      - name: Download the builds
+        id: drafts
+        run: |
+          pick() {
+            if [ "$2" != "latest" ] && [ -n "$2" ]; then echo "$2"; return; fi
+            gh api "repos/$DRAFTS/releases?per_page=100" --jq "[.[] | select(.draft and (.tag_name|startswith(\"$1-build-\")) and (.body|endswith(\": success\")))] | sort_by(.created_at) | last | .tag_name // empty"
+          }
+          android=$(pick android "${{ inputs.android_draft }}")
+          windows=$(pick windows "${{ inputs.windows_draft }}")
+          echo "android=$android" >> "$GITHUB_OUTPUT"; echo "windows=$windows" >> "$GITHUB_OUTPUT"
+          echo "Android: ${android:-none}, Windows: ${windows:-none}"
+          mkdir -p in/android in/windows out
+          get() {
+            id=$(gh api "repos/$DRAFTS/releases?per_page=100" --jq ".[] | select(.tag_name==\"$1\") | .id")
+            gh api "repos/$DRAFTS/releases/$id/assets?per_page=100" --jq '.[] | "\(.id) \(.name)"' | while read -r asset name; do
+              case "$name" in build-logs*) continue ;; esac
+              gh api -H "Accept: application/octet-stream" "repos/$DRAFTS/releases/assets/$asset" > "$2/$name"
+            done
+          }
+          [ -n "$android" ] && get "$android" in/android
+          [ -n "$windows" ] && get "$windows" in/windows
+          ls -la in/*
+
+      - name: Sign Android
+        if: steps.drafts.outputs.android != ''
+        env:
+          STORE_PASSWORD: ${{ secrets.AKHI_ANDROID_STORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.AKHI_ANDROID_KEY_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.AKHI_ANDROID_KEY_ALIAS }}
+          KEYSTORE: ${{ secrets.AKHI_ANDROID_KEYSTORE }}
+        run: |
+          keystore="$RUNNER_TEMP/release.jks"
+          printf '%s' "$KEYSTORE" | base64 -d > "$keystore"
+          tools=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -n 1)
+          for apk in in/android/*.apk; do
+            "$tools/apksigner" sign --ks "$keystore" --ks-pass env:STORE_PASSWORD --ks-key-alias "$KEY_ALIAS" \
+              --key-pass env:KEY_PASSWORD --out "out/$(basename "$apk")" "$apk"
+            "$tools/apksigner" verify --print-certs "out/$(basename "$apk")" | grep -m2 -E "DN:|SHA-256"
+          done
+          for aab in in/android/*.aab; do
+            cp "$aab" "out/$(basename "$aab")"
+            zip -q -d "out/$(basename "$aab")" 'META-INF/*.SF' 'META-INF/*.RSA' 'META-INF/*.EC' 'META-INF/*.DSA' 'META-INF/MANIFEST.MF' || true
+            jarsigner -keystore "$keystore" -storepass:env STORE_PASSWORD -keypass:env KEY_PASSWORD \
+              -sigalg SHA256withRSA -digestalg SHA-256 "out/$(basename "$aab")" "$KEY_ALIAS" > /dev/null
+            jarsigner -verify -strict "out/$(basename "$aab")" | tail -n 1
+          done
+          rm -f "$keystore"
+          if "$tools/apksigner" verify --print-certs out/*-android-arm64-v8a.apk | grep -q "AkhiBrowser test build"; then
+            echo "Still the throwaway key"; exit 1
+          fi
+
+      - name: Sign the Windows update
+        if: steps.drafts.outputs.windows != ''
+        env:
+          AKHI_UPDATE_KEY_P12: ${{ secrets.AKHI_UPDATE_KEY_P12 }}
+          AKHI_UPDATE_KEY_P12_PASSWORD: ${{ secrets.AKHI_UPDATE_KEY_P12_PASSWORD }}
+          NSS_ZIP: ${{ secrets.AKHI_UPDATE_NSS_ZIP }}
+          NSS_PASSWORD: ${{ secrets.AKHI_UPDATE_NSS_PASSWORD }}
+        run: |
+          if [ ! -f in/windows/update-info.json ]; then
+            echo "This Windows build has no unsigned update yet (an older build): only its installer is passed on"
+          else
+            if [ -z "$AKHI_UPDATE_KEY_P12" ]; then
+              # the key from the NSS database itself, exported here with NSS's pk12util
+              sudo apt-get install -y -qq libnss3-tools > /dev/null
+              db="$RUNNER_TEMP/nss"; mkdir -p "$db"
+              printf '%s' "$NSS_ZIP" | base64 -d > "$db/nss.zip"
+              unzip -q -j "$db/nss.zip" cert9.db key4.db -d "$db" && rm "$db/nss.zip"
+              password=()
+              if [ -n "$NSS_PASSWORD" ]; then printf '%s' "$NSS_PASSWORD" > "$db/password"; password=(-k "$db/password"); fi
+              export AKHI_UPDATE_KEY_P12_PASSWORD=$(openssl rand -hex 16)
+              printf '%s' "$AKHI_UPDATE_KEY_P12_PASSWORD" > "$db/export-password"
+              pk12util -o "$db/key.p12" -d "sql:$db" -n akhi-update-primary "${password[@]}" -w "$db/export-password"
+              export AKHI_UPDATE_KEY_P12=$(base64 -w0 "$db/key.p12")
+              rm -rf "$db"
+            fi
+            python3 tools/sign_mar.py in/windows
+          fi
+          for f in in/windows/*; do case "$f" in *.unsigned|*update-info.json) ;; *) cp "$f" out/ ;; esac; done
+
+      - name: Microsoft Store CLI
+        id: msstore
+        if: steps.drafts.outputs.windows != ''
+        uses: microsoft/setup-msstore-cli@v1
+        continue-on-error: true
+
+      - name: Microsoft Store check (read only)
+        id: msstore_check
+        if: steps.msstore.outcome == 'success'
+        continue-on-error: true
+        env:
+          TENANT: ${{ secrets.MSSTORE_TENANT_ID }}
+          CLIENT: ${{ secrets.MSSTORE_CLIENT_ID }}
+          SECRET: ${{ secrets.MSSTORE_CLIENT_SECRET }}
+          SELLER: ${{ secrets.MSSTORE_SELLER_ID }}
+        run: |
+          if [ -z "$TENANT" ] || [ -z "$CLIENT" ] || [ -z "$SECRET" ] || [ -z "$SELLER" ]; then
+            echo "No MSSTORE_ secrets yet: the Store is skipped"; exit 0
+          fi
+          sudo apt-get install -y -qq libsecret-1-0 gnome-keyring dbus-x11 > /dev/null
+          eval "$(dbus-launch --sh-syntax)"
+          printf 'ci-keyring' | gnome-keyring-daemon --replace --daemonize --unlock --components=secrets > /dev/null
+          msstore reconfigure --tenantId "$TENANT" --clientId "$CLIENT" --clientSecret "$SECRET" --sellerId "$SELLER" --verbose
+          msstore submission status 9N8KMF22Z6K4 --verbose
+          ls out/*.msix 2>/dev/null || echo "This Windows build has no .msix (an older build)"
+
+      - name: Put the signed files in a private draft
+        run: |
+          ls -la out
+          gh release create "signed-${{ github.run_id }}-${{ github.run_attempt }}" out/* --repo "$DRAFTS" --draft \
+            --title "Signed builds ${{ github.run_id }}" \
+            --notes "Signed from ${{ steps.drafts.outputs.android }} and ${{ steps.drafts.outputs.windows }}"
+
+      - name: Google Play check (dry run, nothing published)
+        if: steps.drafts.outputs.android != ''
+        env:
+          PLAY_KEY: ${{ secrets.AKHI_PLAY_SERVICE_ACCOUNT }}
+        run: |
+          key="$RUNNER_TEMP/play.json"
+          printf '%s' "$PLAY_KEY" > "$key"
+          node tools/upload_play.mjs --aab out/*-play.aab --key "$key" --track internal --dry-run
+          rm -f "$key"
+
+      - name: To Google Play
+        if: github.event_name == 'workflow_dispatch' && inputs.play_track != 'none' && steps.drafts.outputs.android != ''
+        env:
+          PLAY_KEY: ${{ secrets.AKHI_PLAY_SERVICE_ACCOUNT }}
+        run: |
+          key="$RUNNER_TEMP/play.json"
+          printf '%s' "$PLAY_KEY" > "$key"
+          node tools/upload_play.mjs --aab out/*-play.aab --key "$key" --track "${{ inputs.play_track }}"
+          rm -f "$key"
+
+      - name: To the Microsoft Store
+        if: github.event_name == 'workflow_dispatch' && inputs.msstore != 'none' && steps.msstore_check.outcome == 'success'
+        env:
+          SELLER: ${{ secrets.MSSTORE_SELLER_ID }}
+        run: |
+          [ -n "$SELLER" ] || { echo "No MSSTORE_ secrets yet"; exit 0; }
+          msix=$(ls out/*.msix | head -n 1)
+          msstore publish "$msix" -id 9N8KMF22Z6K4 ${{ inputs.msstore == 'draft' && '--noCommit' || '' }}
