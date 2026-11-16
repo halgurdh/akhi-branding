@@ -132,3 +132,8 @@ pref("dom.push.connection.enabled", false);
 pref("browser.contentblocking.report.monitor.enabled", false);
 pref("browser.contentblocking.report.lockwise.enabled", false);
 pref("browser.contentblocking.report.hide_vpn_banner", true);
+
+// AkhiBrowser: no remote updates of the built-in add-ons from Mozilla (the new tab and others), which would bring back
+// Firefox's texts and undo AkhiBrowser's changes to them; they update with AkhiBrowser itself
+pref("extensions.systemAddon.update.enabled", false);
+pref("extensions.systemAddon.update.url", "");
