@@ -10,7 +10,8 @@
 #   AKHI_UPDATE_NSS_PASSWORD if that database has one, or
 #   AKHI_UPDATE_KEY_P12 and AKHI_UPDATE_KEY_P12_PASSWORD (the key exported with pk12util)
 # For the Microsoft Store (optional): MSSTORE_TENANT_ID, MSSTORE_CLIENT_ID, MSSTORE_CLIENT_SECRET, MSSTORE_SELLER_ID,
-# of a Microsoft Entra application added in Partner Center (Account settings, User management) as Manager
+# of a Microsoft Entra application (Entra ID, App registrations) added in Partner Center (Account settings, User
+# management, Microsoft Entra applications) as Manager
 name: Sign and publish the GitHub builds
 
 on:
