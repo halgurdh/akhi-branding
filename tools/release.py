@@ -61,6 +61,8 @@ MSSTORE_IDENTITY = [
 CRITICAL_SMOKE = [
     "0 Family", "1 ordinary", "2 adult site", "3 adult subdomain", "4 haram search", "5 Google SafeSearch",
     "10 block list", "11 allow only", "14 internet pause",
+    # local pages, so not up to other sites: they fail when the Premium content scripts don't load
+    "16 profanity mask", "17 halal check", "18 riba warning", "27 riba warning on car loans",
 ]
 TARGETS = ["windows", "android", "play", "msstore"]
 STEPS = ["pull", "version", "desktop", "smoke", "android", "sums", "drive", "upload", "push"]

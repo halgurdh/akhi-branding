@@ -335,7 +335,8 @@ await test("18 riba warning", async () => {
 });
 await test("19 trusted sources", async () => {
   await withSettings({ trustedSources: true }, async () => {
-    await openPast("https://www.google.com/search?q=is+mortgage+halal", 5000);
+    // DuckDuckGo: Google answers a browser under automation with its robot check instead of results
+    await openPast("https://duckduckgo.com/?q=is+mortgage+halal", 5000);
     const r = await page(`!!document.querySelector("akhi-trusted, [data-akhi-trusted], .akhi-trusted-mark")`);
     record("19 trusted sources", r.value === true, `box or marks: ${r.value ?? r.error}`);
   });
@@ -374,11 +375,8 @@ async function findRecitation() {
 
 await test("22 hide comments", async () => {
   await withSettings({ hideComments: true }, async () => {
-    const video = await findRecitation();
-    if (!video) {
-      return record("22 hide comments", false, "no video found");
-    }
-    await open(video, 5000);
+    // the mark is on every YouTube page, a video isn't needed for it
+    await openPast("https://www.youtube.com/", 5000);
     const r = await page(`document.documentElement.hasAttribute("data-akhi-hide-comments")`);
     record("22 hide comments", r.value === true, `html[data-akhi-hide-comments]: ${r.value ?? r.error}`);
   });

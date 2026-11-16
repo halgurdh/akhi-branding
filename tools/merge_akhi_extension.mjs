@@ -38,6 +38,7 @@ for (const path of [
   "content/trusted_sources.js",
   "content/halal_places.js",
   "content/deen_time.js",
+  "content/word_block.js",
   "lib/family_controls.js",
   "lib/parent_report.js",
   "lib/family.js",
@@ -79,6 +80,7 @@ for (const path of [
   "content/trusted_sources.js",
   "content/halal_places.js",
   "content/deen_time.js",
+  "content/word_block.js",
   "lib/family_controls.js",
   "lib/parent_report.js",
   "lib/family.js",
@@ -101,4 +103,15 @@ for (const path of [
     throw new Error(`Couldn't minify Premium source: ${path}`);
   }
   writeFileSync(destination, result.code);
+}
+
+// a file the manifest names but the build left out stops a whole group of content scripts from loading
+const manifest = JSON.parse(readFileSync(join(target, "manifest.json"), "utf8"));
+const named = [
+  ...(manifest.background?.scripts ?? []),
+  ...(manifest.content_scripts ?? []).flatMap(group => [...(group.js ?? []), ...(group.css ?? [])]),
+];
+const missing = named.filter(path => !existsSync(join(target, path)));
+if (missing.length) {
+  throw new Error(`Named in manifest.json but missing from the extension: ${missing.join(", ")}`);
 }
