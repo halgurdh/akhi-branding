@@ -1,0 +1,70 @@
+# Sends a signed .msix to the Microsoft Store's certification once the submission before it has left certification:
+# the Store takes one submission at a time. Set the repository variable MSSTORE_NEXT to the signed draft in
+# akhi-extension (signed-<run>-<attempt>) and enable this workflow; after the upload it clears nothing but disables
+# itself, so it runs once.
+name: Microsoft Store when free
+
+on:
+  schedule:
+    - cron: "17 */3 * * *"
+  workflow_dispatch:
+
+permissions:
+  actions: write
+  contents: read
+
+concurrency:
+  group: cloud-release
+  cancel-in-progress: false
+
+jobs:
+  store:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.AKHI_SUBMODULES_TOKEN }}
+      DRAFT: ${{ vars.MSSTORE_NEXT }}
+    steps:
+      - uses: microsoft/setup-msstore-cli@v1
+
+      - name: Is the Store free?
+        id: status
+        env:
+          TENANT: ${{ secrets.MSSTORE_TENANT_ID }}
+          CLIENT: ${{ secrets.MSSTORE_CLIENT_ID }}
+          SECRET: ${{ secrets.MSSTORE_CLIENT_SECRET }}
+          SELLER: ${{ secrets.MSSTORE_SELLER_ID }}
+        run: |
+          [ -n "$DRAFT" ] || { echo "No MSSTORE_NEXT set"; echo "free=no" >> "$GITHUB_OUTPUT"; exit 0; }
+          sudo apt-get install -y -qq libsecret-1-0 gnome-keyring dbus-x11 > /dev/null
+          eval "$(dbus-launch --sh-syntax)"
+          printf 'ci-keyring' | gnome-keyring-daemon --replace --daemonize --unlock --components=secrets > /dev/null
+          echo "DBUS_SESSION_BUS_ADDRESS=$DBUS_SESSION_BUS_ADDRESS" >> "$GITHUB_ENV"
+          msstore reconfigure --tenantId "$TENANT" --clientId "$CLIENT" --clientSecret "$SECRET" --sellerId "$SELLER" > /dev/null
+          status=$(msstore submission status 9N8KMF22Z6K4 2>&1 | sed 's/\x1b\[[0-9;]*m//g' | tee /dev/stderr)
+          if echo "$status" | grep -qE "Submission Status = (Certification|PreProcessing|CommitStarted|Publishing|PendingCommit)"; then
+            echo "Still busy"; echo "free=no" >> "$GITHUB_OUTPUT"
+          else
+            echo "free=yes" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: To certification
+        if: steps.status.outputs.free == 'yes'
+        run: |
+          mkdir in
+          gh release download "$DRAFT" --repo halgurdh/akhi-extension --pattern "*.msix" --dir in
+          msix=$(ls in/*.msix | head -n 1)
+          echo "Sending $msix"
+          msstore publish "$msix" -id 9N8KMF22Z6K4
+          GH_TOKEN=${{ github.token }} gh workflow disable msstore-when-free.yml --repo "$GITHUB_REPOSITORY"
+
+      - name: Mail
+        if: steps.status.outputs.free == 'yes' || failure()
+        env:
+          AKHI_OPS_TOKEN: ${{ secrets.AKHI_OPS_TOKEN }}
+        run: |
+          [ -n "$AKHI_OPS_TOKEN" ] || exit 0
+          text="Microsoft Store: $DRAFT sent to certification: ${{ job.status }}
+          $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+          jq -n --arg subject "AkhiBrowser: Microsoft Store upload ${{ job.status }}" --arg text "$text" '{subject: $subject, text: $text}' |
+            curl -fsS -m 30 -X POST https://akhi-license.akhibrowser.workers.dev/ops/notify \
+              -H "Authorization: Bearer $AKHI_OPS_TOKEN" -H "Content-Type: application/json" --data-binary @- > /dev/null || true
