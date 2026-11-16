@@ -48,6 +48,8 @@ def build_and_package(mozconfig, objdir, full=True):
             if source.is_file():
                 target = built_extension / source.relative_to(minified)
                 target.parent.mkdir(parents=True, exist_ok=True)
+                # on Linux and macOS dist/bin links to the source files: replace the link, never write through it
+                target.unlink(missing_ok=True)
                 target.write_bytes(source.read_bytes())
     run([sys.executable, "mach", "package"], env=env)
 

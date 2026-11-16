@@ -59,6 +59,7 @@ def build(env):
             if source.is_file():
                 target = BUILT_EXTENSION / source.relative_to(minified)
                 target.parent.mkdir(parents=True, exist_ok=True)
+                target.unlink(missing_ok=True)
                 target.write_bytes(source.read_bytes())
     run([sys.executable, "mach", "package"], env=env)
 
