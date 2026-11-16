@@ -49,7 +49,7 @@ permissions:
 jobs:
   sign:
     runs-on: ubuntu-24.04
-    timeout-minutes: 45
+    timeout-minutes: 40
     env:
       GH_TOKEN: ${{ secrets.AKHI_SUBMODULES_TOKEN }}
       DRAFTS: halgurdh/akhi-extension
