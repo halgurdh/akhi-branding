@@ -4,6 +4,8 @@
 // On the internal track the release goes out to the testers at once; on any other track it stays a draft, to send
 // out from the Play Console. The service account needs "Release to testing tracks" (and "Release to production" for
 // production) in the Play Console's Users and permissions.
+// --dry-run: the same up to the commit, then Play validates the edit and it's deleted, so nothing is published: a
+// check that the bundle's signature and version are accepted and the service account may release.
 
 import fs from "node:fs";
 import { parseArgs } from "node:util";
@@ -18,6 +20,7 @@ const { values } = parseArgs({
     key: { type: "string" },
     track: { type: "string", default: "internal" },
     notes: { type: "string", default: "" },
+    "dry-run": { type: "boolean", default: false },
   },
 });
 if (!values.aab || !values.key) {
@@ -84,5 +87,21 @@ await call(`${API}/edits/${edit.id}/tracks/${values.track}`, {
   method: "PUT",
   body: JSON.stringify({ track: values.track, releases: [release] }),
 });
-await call(`${API}/edits/${edit.id}:commit`, { method: "POST", body: "{}" });
-console.log(`Play: version code ${bundle.versionCode} on the ${values.track} track (${release.status})`);
+if (values["dry-run"]) {
+  try {
+    await call(`${API}/edits/${edit.id}:validate`, { method: "POST", body: "{}" });
+    const { tracks = [] } = (await call(`${API}/edits/${edit.id}/tracks`)) ?? {};
+    for (const track of tracks) {
+      const codes = (track.releases ?? []).map(r => `${r.name ?? "?"} [${(r.versionCodes ?? []).join(",")}] ${r.status}`);
+      console.log(`  ${track.track}: ${codes.join("; ") || "empty"}`);
+    }
+  } finally {
+    await call(`${API}/edits/${edit.id}`, { method: "DELETE" });
+  }
+  console.log(
+    `Play (dry run): version code ${bundle.versionCode} accepted and validated for the ${values.track} track; the edit was deleted, nothing published`
+  );
+} else {
+  await call(`${API}/edits/${edit.id}:commit`, { method: "POST", body: "{}" });
+  console.log(`Play: version code ${bundle.versionCode} on the ${values.track} track (${release.status})`);
+}

@@ -182,6 +182,16 @@ jobs:
             --title "Signed builds ${{ github.run_id }}" \
             --notes "Signed from ${{ steps.drafts.outputs.android }} and ${{ steps.drafts.outputs.windows }}"
 
+      - name: Google Play check (dry run, nothing published)
+        if: steps.drafts.outputs.android != ''
+        env:
+          PLAY_KEY: ${{ secrets.AKHI_PLAY_SERVICE_ACCOUNT }}
+        run: |
+          key="$RUNNER_TEMP/play.json"
+          printf '%s' "$PLAY_KEY" > "$key"
+          node tools/upload_play.mjs --aab out/*-play.aab --key "$key" --track internal --dry-run
+          rm -f "$key"
+
       - name: To Google Play
         if: github.event_name == 'workflow_dispatch' && inputs.play_track != 'none' && steps.drafts.outputs.android != ''
         env:
