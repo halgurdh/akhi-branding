@@ -198,6 +198,10 @@ async function withSettings(items, fn) {
 // the extension starts after the first window
 await sleep(12000);
 
+// no usage ping from a test run: it comes a minute after the start, as a new install with Family Premium (below), and
+// from GitHub's Windows machines it showed as paying users in the US on /stats
+await storage({ usageStats: false });
+
 // a release build on a computer has no Premium for testing: Family in this throwaway profile's storage, for the test
 if (process.env.SMOKE_FAMILY === "storage") {
   await storage({ premiumPlan: "family", premiumUntil: Date.now() + 3600 * 1000 });
