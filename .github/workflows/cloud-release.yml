@@ -244,7 +244,7 @@ jobs:
           gh release upload "v$VERSION" "$mar" "$xml" --repo halgurdh/akhiBrowser --clobber
 
       - name: Google Play check (dry run, nothing published)
-        if: steps.drafts.outputs.android != ''
+        if: steps.drafts.outputs.android != '' && inputs.play_track != 'none'
         env:
           PLAY_KEY: ${{ secrets.AKHI_PLAY_SERVICE_ACCOUNT }}
         run: |
