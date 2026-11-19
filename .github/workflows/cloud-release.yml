@@ -179,7 +179,7 @@ jobs:
           else
             if [ -z "$AKHI_UPDATE_KEY_P12" ]; then
               # the key from the NSS database itself, exported here with NSS's pk12util
-              sudo apt-get install -y -qq libnss3-tools > /dev/null
+              sudo apt-get update -qq > /dev/null && sudo apt-get install -y -qq libnss3-tools > /dev/null
               db="$RUNNER_TEMP/nss"; mkdir -p "$db"
               printf '%s' "$NSS_ZIP" | base64 -d > "$db/nss.zip"
               unzip -q -j "$db/nss.zip" cert9.db key4.db -d "$db" && rm "$db/nss.zip"
@@ -214,7 +214,7 @@ jobs:
           if [ -z "$TENANT" ] || [ -z "$CLIENT" ] || [ -z "$SECRET" ] || [ -z "$SELLER" ]; then
             echo "No MSSTORE_ secrets yet: the Store is skipped"; exit 0
           fi
-          sudo apt-get install -y -qq libsecret-1-0 gnome-keyring dbus-x11 > /dev/null
+          sudo apt-get update -qq > /dev/null && sudo apt-get install -y -qq libsecret-1-0 gnome-keyring dbus-x11 > /dev/null
           eval "$(dbus-launch --sh-syntax)"
           printf 'ci-keyring' | gnome-keyring-daemon --replace --daemonize --unlock --components=secrets > /dev/null
           # the upload is a later step: it needs the same session of the keyring
