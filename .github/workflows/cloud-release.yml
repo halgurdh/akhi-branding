@@ -263,7 +263,7 @@ jobs:
           key="$RUNNER_TEMP/play.json"
           printf '%s' "$PLAY_KEY" > "$key"
           notes=()
-          [ -n "$NOTES" ] && notes=(--notes "$NOTES")
+          [ -n "$NOTES" ] && notes=("--notes=$NOTES")
           node tools/upload_play.mjs --aab out/*-play.aab --key "$key" --track "${{ inputs.play_track }}" "${notes[@]}"
           rm -f "$key"
 
