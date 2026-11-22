@@ -7,6 +7,9 @@
 pref("startup.homepage_override_url", "");
 pref("startup.homepage_welcome_url", "");
 pref("startup.homepage_welcome_url.additional", "");
+// AkhiBrowser: the welcome page is off, so it asks to be the default browser at the first start (Firefox waits for
+// the second); not when it already is, and like Firefox no more after a few no's
+pref("browser.shell.skipDefaultBrowserCheckOnFirstRun", false);
 // The time interval between checks for a new version (in seconds)
 pref("app.update.interval", 86400); // 24 hours
 // Give the user x seconds to react before showing the big UI. default=24 hours
