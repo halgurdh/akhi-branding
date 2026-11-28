@@ -1,0 +1,47 @@
+# Renders the Instagram agent's reels (instagram/render-reels.mjs): the worker akhi-instagram (in the private repo
+# halgurdh/akhibrowser-premium) prepares the script, text overlays and stock clips, this job turns them into an MP4
+# with ffmpeg and uploads it back. It runs here because akhi-branding is public: its Actions minutes are free, and
+# the standard runner has 4 CPUs instead of 2.
+# Secrets of this repository: CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID (the same as in akhibrowser-premium).
+# Only schedule and manual runs: no pull_request trigger, so the secrets never reach code from a fork.
+name: Render reels
+
+on:
+  schedule:
+    - cron: "17 * * * *"  # every hour: free here, and a reel is ready sooner after "opnieuw maken"
+  workflow_dispatch:
+
+concurrency:
+  group: render-reels
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  render:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+          sparse-checkout: instagram
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+      - name: Install ffmpeg
+        run: command -v ffmpeg || (sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg)
+      - name: Secrets present
+        env:
+          A: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          B: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          [ -n "$A" ] || { echo "MISSING secret CLOUDFLARE_API_TOKEN"; exit 1; }
+          [ -n "$B" ] || { echo "MISSING secret CLOUDFLARE_ACCOUNT_ID"; exit 1; }
+      - name: Render
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          WORKER_URL: https://akhi-instagram.akhibrowser.workers.dev
+        run: node instagram/render-reels.mjs
